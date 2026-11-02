@@ -1,16 +1,16 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { RequireRole } from './components/RequireRole'
-import { SiteLayout } from './components/SiteLayout'
-import { AdminPostsPage } from './pages/AdminPostsPage'
-import { AdminUsersPage } from './pages/AdminUsersPage'
-import { AccountPage } from './pages/AccountPage'
-import { HomePage } from './pages/HomePage'
-import { MyStoriesPage } from './pages/MyStoriesPage'
-import { NotFoundPage } from './pages/NotFoundPage'
-import { PostEditorPage } from './pages/PostEditorPage'
-import { PostPage } from './pages/PostPage'
-import { SignInPage } from './pages/SignInPage'
-import { SectionPage } from './pages/SectionPage'
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { RequireRole } from "./components/RequireRole";
+import { SiteLayout } from "./components/SiteLayout";
+import { AdminPostsPage } from "./pages/AdminPostsPage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { AccountPage } from "./pages/AccountPage";
+import { HomePage } from "./pages/HomePage";
+import { MyStoriesPage } from "./pages/MyStoriesPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { PostEditorPage } from "./pages/PostEditorPage";
+import { PostPage } from "./pages/PostPage";
+import { SignInPage } from "./pages/SignInPage";
+import { SectionPage } from "./pages/SectionPage";
 
 function App() {
   return (
@@ -39,7 +39,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

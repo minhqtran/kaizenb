@@ -1,13 +1,13 @@
-import { createContext } from 'react'
-import type { AppUser, GoogleIdentity, UserRole } from '../types/user'
+import { createContext } from "react";
+import type { AppUser, GoogleIdentity, UserRole } from "../types/user";
 
 export interface AuthContextValue {
-  user: AppUser | null
-  users: AppUser[]
-  signIn: (identity: GoogleIdentity) => AppUser
-  signOut: () => void
-  setUserRole: (targetId: string, role: UserRole) => void
-  updateProfile: (nickname: string, profileImageKey: string | null) => AppUser
+  user: AppUser | null;
+  users: AppUser[];
+  signIn: (identity: GoogleIdentity) => AppUser;
+  signOut: () => void;
+  setUserRole: (targetId: string, role: UserRole) => void;
+  updateProfile: (nickname: string, profileImageKey: string | null) => AppUser;
 }
 
-export const AuthContext = createContext<AuthContextValue | null>(null)
+export const AuthContext = createContext<AuthContextValue | null>(null);

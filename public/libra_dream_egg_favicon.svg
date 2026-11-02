@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Libra, dreaming and becoming</title>
+  <desc id="desc">A golden Libra glyph and guiding star float above a dreamlike ribbon of mist and a broken eggshell glowing from within.</desc>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="3" x2="56" y2="62" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20243D"/>
+      <stop offset="1" stop-color="#0B1221"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="18" y1="10" x2="46" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8DDAA"/>
+      <stop offset=".55" stop-color="#E4B477"/>
+      <stop offset="1" stop-color="#B97754"/>
+    </linearGradient>
+    <linearGradient id="mist" x1="8" y1="31" x2="56" y2="43" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#655B80"/>
+      <stop offset=".55" stop-color="#39334F"/>
+      <stop offset="1" stop-color="#81708B"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="32" cy="51" r="17" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD99A" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#D88F59" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="disc"><circle cx="32" cy="32" r="29"/></clipPath>
+  </defs>
+
+  <circle cx="32" cy="32" r="30" fill="url(#bg)"/>
+  <g clip-path="url(#disc)">
+    <!-- guiding star -->
+    <path d="M32 5.5 33.5 12.5 40.5 14 33.5 15.5 32 22.5 30.5 15.5 23.5 14 30.5 12.5Z" fill="#F8DDAA"/>
+    <circle cx="32" cy="14" r="1" fill="#FFF2D7"/>
+
+    <!-- Libra glyph: recognizable, balanced, and kept clear at small sizes -->
+    <path d="M24 27.2c0-4.45 3.58-7.2 8-7.2s8 2.75 8 7.2M19.5 31.5h25M19.5 36h25"
+          fill="none" stroke="url(#gold)" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M21.5 31.5h21" stroke="#FFF0D0" stroke-width=".55" opacity=".7"/>
+
+    <!-- dreamlike ribbon of mist -->
+    <path d="M5 40c8-10 15-8 23-5 7 3 13 4 19-1 4-3 8-5 13-4-7 7-12 12-21 12-10 0-15-7-24-5-4 1-7 3-10 6Z"
+          fill="url(#mist)" opacity=".95"/>
+    <path d="M7 42c10-7 17-3 24 0 7 3 15 1 25-5" fill="none" stroke="#A18AA0" stroke-width=".8" opacity=".6"/>
+
+    <!-- warm light rising from the broken shell -->
+    <ellipse cx="32" cy="52" rx="16" ry="11" fill="url(#glow)"/>
+    <path d="M32 42c-3 5-4 8 0 12 4-4 3-7 0-12Z" fill="#F7D39A" opacity=".8"/>
+
+    <!-- shell halves, deliberately broken at the bottom -->
+    <path d="M11 43c1-5 4-8 8-10l2 7-3 5 5 3-1 7c-5-2-9-6-11-12Z"
+          fill="#756078" stroke="#E8BD8A" stroke-width="1.15" stroke-linejoin="round"/>
+    <path d="M53 43c-1-5-4-8-8-10l-2 7 3 5-5 3 1 7c5-2 9-6 11-12Z"
+          fill="#756078" stroke="#E8BD8A" stroke-width="1.15" stroke-linejoin="round"/>
+    <path d="m19 33 2 7-3 5 5 3-1 7M45 33l-2 7 3 5-5 3 1 7"
+          fill="none" stroke="#F8DDAA" stroke-width=".8" stroke-linejoin="round"/>
+    <!-- separated bottom shards -->
+    <path d="m15 53 8 2 3 4-9-1-4-3ZM49 53l-8 2-3 4 9-1 4-3Z"
+          fill="#A77A70" stroke="#E8BD8A" stroke-width=".8" stroke-linejoin="round"/>
+    <path d="m27 58 5-2 5 2-5 2Z" fill="#D49B6D"/>
+    <!-- tiny stars -->
+    <path d="m12 23 .8 2.2L15 26l-2.2.8L12 29l-.8-2.2L9 26l2.2-.8Z" fill="#DDB77F"/>
+    <path d="m51 22 .7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z" fill="#DDB77F"/>
+  </g>
+  <circle cx="32" cy="32" r="29.2" fill="none" stroke="#D8A66F" stroke-width="1.15"/>
+</svg>
