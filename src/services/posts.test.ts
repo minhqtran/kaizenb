@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AppUser } from '../types/user'
-import { createPost, deletePost, getAllPosts, getMyPosts, getPost, getPosts, updatePost } from './posts'
+import { createPost, deletePost, getAllPosts, getMyPosts, getPost, getPosts, getPostsByCategory, updatePost } from './posts'
 
 const writer: AppUser = { id: 'writer-1', googleSubject: 'sub-1', email: 'writer@example.test', displayName: 'Writer One', role: 'writer' }
 const otherWriter: AppUser = { id: 'writer-2', googleSubject: 'sub-2', email: 'writer2@example.test', displayName: 'Writer Two', role: 'writer' }
@@ -68,5 +68,45 @@ describe('local post repository', () => {
       status: 'published',
       images: [{ id: 'image-1', src: '', alt: ' ', layout: 'featured' }],
     }, writer)).rejects.toThrow('alternative text')
+  })
+
+  it('normalizes legacy body and image records into their original reading order', async () => {
+    localStorage.setItem('goodword.posts.v1', JSON.stringify([{
+      ...input,
+      id: 'legacy-post',
+      slug: 'legacy-post',
+      authorId: writer.id,
+      authorName: writer.displayName,
+      status: 'draft',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      body: 'First paragraph.\n\nSecond paragraph.',
+      images: [
+        { id: 'cover', src: '', alt: 'Cover', layout: 'featured' },
+        { id: 'inline', src: '', alt: 'Inline', layout: 'inline' },
+        { id: 'end', src: '', alt: 'End', layout: 'full-width' },
+      ],
+    }]))
+    const post = await getPost('legacy-post', writer)
+    expect(post.contentBlocks?.map((block) => block.type === 'image' ? block.imageId : block.content)).toEqual([
+      'cover', 'First paragraph.', 'inline', 'Second paragraph.', 'end',
+    ])
+  })
+
+  it('persists ordered blocks and filters published stories by category', async () => {
+    const contentBlocks = [
+      { id: 'text-1', type: 'markdown' as const, content: 'A story about a favorite record, worth listening to again.' },
+      { id: 'image-1', type: 'image' as const, imageId: 'music-image' },
+    ]
+    const musicStory = await createPost({
+      ...input,
+      category: 'Music',
+      status: 'published',
+      contentBlocks,
+      images: [{ id: 'music-image', src: '', alt: 'Record player', layout: 'inline' }],
+    }, writer)
+    await createPost({ ...input, title: 'A thought', slug: 'a-thought', category: 'Thoughts', status: 'published' }, writer)
+    expect((await getPost(musicStory.slug)).contentBlocks).toEqual(contentBlocks)
+    expect((await getPostsByCategory(' music ')).map((post) => post.id)).toEqual([musicStory.id])
   })
 })

@@ -10,21 +10,27 @@ export interface BlogImage {
   storageKey?: string
 }
 
+export type StoryBlock =
+  | { id: string; type: 'markdown'; content: string }
+  | { id: string; type: 'image'; imageId: string }
+
 export interface BlogPost {
   id: string
   slug: string
   title: string
   excerpt: string
   body: string
+  contentBlocks?: StoryBlock[]
   category: string
   images: BlogImage[]
   authorId: string
   authorName: string
   authorAvatarUrl?: string
+  authorAvatarStorageKey?: string
   status: BlogStatus
   createdAt: string
   updatedAt: string
   publishedAt?: string
 }
 
-export type PostInput = Pick<BlogPost, 'title' | 'slug' | 'excerpt' | 'body' | 'images' | 'category' | 'status'>
+export type PostInput = Pick<BlogPost, 'title' | 'slug' | 'excerpt' | 'body' | 'images' | 'category' | 'status'> & { contentBlocks?: StoryBlock[] }

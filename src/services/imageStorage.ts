@@ -1,5 +1,12 @@
 const databaseName = 'goodword-media'
 const storeName = 'images'
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const maximumImageSize = 8 * 1024 * 1024
+
+export function validateImageFile(file: File) {
+  if (!allowedImageTypes.includes(file.type)) throw new Error(`${file.name} is not a supported image. Use JPEG, PNG, WebP, or GIF.`)
+  if (file.size > maximumImageSize) throw new Error(`${file.name} is larger than 8 MB. Choose a smaller image.`)
+}
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {

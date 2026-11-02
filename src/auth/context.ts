@@ -7,6 +7,7 @@ export interface AuthContextValue {
   signIn: (identity: GoogleIdentity) => AppUser
   signOut: () => void
   setUserRole: (targetId: string, role: UserRole) => void
+  updateProfile: (nickname: string, profileImageKey: string | null) => AppUser
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

@@ -1,23 +1,50 @@
 import { mockPosts } from '../data/mockPosts'
-import type { AppUser } from '../types/user'
-import type { BlogPost, PostInput } from '../types/post'
+import { effectiveDisplayName, type AppUser } from '../types/user'
+import type { BlogImage, BlogPost, PostInput, StoryBlock } from '../types/post'
 import { createSlug } from '../utils/formatDate'
 import { removeImages } from './imageStorage'
 import { canAdmin, canEditPost, canWrite } from './permissions'
 
 const postsKey = 'goodword.posts.v1'
 
+function legacyContentBlocks(body: string, images: BlogImage[]): StoryBlock[] {
+  const blocks: StoryBlock[] = []
+  const inlineImages = images.filter((image) => image.layout === 'inline')
+  let inlineIndex = 0
+
+  images.filter((image) => image.layout === 'featured').forEach((image) => blocks.push({ id: `image-${image.id}`, type: 'image', imageId: image.id }))
+  body.split(/\n\s*\n/).filter(Boolean).forEach((paragraph, index) => {
+    blocks.push({ id: `text-${index}`, type: 'markdown', content: paragraph })
+    const inlineImage = inlineImages[inlineIndex++]
+    if (inlineImage) blocks.push({ id: `image-${inlineImage.id}`, type: 'image', imageId: inlineImage.id })
+  })
+  inlineImages.slice(inlineIndex).forEach((image) => blocks.push({ id: `image-${image.id}`, type: 'image', imageId: image.id }))
+  images.filter((image) => image.layout !== 'featured' && image.layout !== 'inline').forEach((image) => {
+    blocks.push({ id: `image-${image.id}`, type: 'image', imageId: image.id })
+  })
+  return blocks
+}
+
+function normalizePost(post: BlogPost): BlogPost {
+  return {
+    ...post,
+    images: post.images ?? [],
+    contentBlocks: Array.isArray(post.contentBlocks) ? post.contentBlocks : legacyContentBlocks(post.body ?? '', post.images ?? []),
+  }
+}
+
 function readPosts(): BlogPost[] {
   try {
     const raw = localStorage.getItem(postsKey)
     if (!raw) {
-      localStorage.setItem(postsKey, JSON.stringify(mockPosts))
-      return [...mockPosts]
+      const seededPosts = mockPosts.map(normalizePost)
+      localStorage.setItem(postsKey, JSON.stringify(seededPosts))
+      return seededPosts
     }
     const posts: unknown = JSON.parse(raw)
-    return Array.isArray(posts) ? posts as BlogPost[] : [...mockPosts]
+    return Array.isArray(posts) ? (posts as BlogPost[]).map(normalizePost) : mockPosts.map(normalizePost)
   } catch {
-    return [...mockPosts]
+    return mockPosts.map(normalizePost)
   }
 }
 
@@ -34,7 +61,8 @@ function uniqueSlug(title: string, posts: BlogPost[], currentId?: string) {
 }
 
 function validateForPublish(input: PostInput) {
-  if (!input.title.trim() || !input.excerpt.trim() || input.body.trim().length < 20) {
+  const storyText = input.contentBlocks?.filter((block) => block.type === 'markdown').map((block) => block.content).join('\n\n') ?? input.body
+  if (!input.title.trim() || !input.excerpt.trim() || storyText.trim().length < 20) {
     throw new Error('Publishing requires a title, short introduction, and at least 20 characters of story text.')
   }
   if (input.images.some((image) => !image.alt.trim())) {
@@ -75,11 +103,13 @@ export async function createPost(input: PostInput, actor: AppUser): Promise<Blog
   const now = new Date().toISOString()
   const post: BlogPost = {
     ...input,
+    contentBlocks: input.contentBlocks ?? legacyContentBlocks(input.body, input.images),
     id: crypto.randomUUID(),
     slug: uniqueSlug(input.slug || input.title, posts),
     authorId: actor.id,
-    authorName: actor.displayName,
-    ...(actor.avatarUrl ? { authorAvatarUrl: actor.avatarUrl } : {}),
+    authorName: effectiveDisplayName(actor),
+    ...(!actor.profileImageKey && actor.avatarUrl ? { authorAvatarUrl: actor.avatarUrl } : {}),
+    ...(actor.profileImageKey ? { authorAvatarStorageKey: actor.profileImageKey } : {}),
     createdAt: now,
     updatedAt: now,
     ...(input.status === 'published' ? { publishedAt: now } : {}),
@@ -96,11 +126,13 @@ export async function updatePost(slug: string, input: PostInput, actor: AppUser)
   const updated: BlogPost = {
     ...existing,
     ...input,
+    contentBlocks: input.contentBlocks ?? legacyContentBlocks(input.body, input.images),
     id: existing.id,
     slug: uniqueSlug(input.slug || input.title, posts, existing.id),
     authorId: existing.authorId,
     authorName: existing.authorName,
     ...(existing.authorAvatarUrl ? { authorAvatarUrl: existing.authorAvatarUrl } : {}),
+    ...(existing.authorAvatarStorageKey ? { authorAvatarStorageKey: existing.authorAvatarStorageKey } : {}),
     updatedAt: new Date().toISOString(),
     ...(input.status === 'published' ? { publishedAt: existing.publishedAt ?? new Date().toISOString() } : { publishedAt: undefined }),
   }
@@ -115,4 +147,19 @@ export async function deletePost(slug: string, actor: AppUser): Promise<void> {
   if (!post) throw new Error('This story could not be found.')
   await removeImages(post.images.map((image) => image.storageKey).filter((key): key is string => Boolean(key)))
   writePosts(posts.filter((entry) => entry.id !== post.id))
+}
+
+export function updatePostsAuthorProfile(authorId: string, authorName: string, avatarUrl?: string, avatarStorageKey?: string) {
+  const posts = readPosts().map((post) => post.authorId === authorId ? {
+    ...post,
+    authorName,
+    authorAvatarUrl: avatarStorageKey ? undefined : avatarUrl,
+    authorAvatarStorageKey: avatarStorageKey,
+  } : post)
+  writePosts(posts)
+}
+
+export async function getPostsByCategory(category: string): Promise<BlogPost[]> {
+  const normalizedCategory = category.trim().toLowerCase()
+  return (await getPosts()).filter((post) => post.category.trim().toLowerCase() === normalizedCategory)
 }

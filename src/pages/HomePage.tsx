@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BlogImageView } from '../components/BlogImageView'
+import { UserAvatar } from '../components/UserAvatar'
 import { getPosts } from '../services/posts'
 import type { BlogPost } from '../types/post'
 import { formatDate } from '../utils/formatDate'
@@ -41,7 +42,7 @@ export function HomePage() {
           <div className="featured-copy">
             <div className="eyebrow">Editor's letter · {featured.category}</div>
             <h2>{featured.title}</h2><p>{featured.excerpt}</p>
-            <div className="featured-meta">{featured.authorAvatarUrl && <img src={featured.authorAvatarUrl} alt="" />}<span>{featured.authorName} · {formatDate(featured.publishedAt ?? featured.createdAt)} · {readingTime(featured.body)} min read</span></div>
+            <div className="featured-meta">{(featured.authorAvatarUrl || featured.authorAvatarStorageKey) && <UserAvatar className="author-avatar" displayName={featured.authorName} imageKey={featured.authorAvatarStorageKey} imageUrl={featured.authorAvatarUrl} />}<span>{featured.authorName} · {formatDate(featured.publishedAt ?? featured.createdAt)} · {readingTime(featured.body)} min read</span></div>
             <div style={{ marginTop: 22 }}><Link className="text-link" to={`/posts/${featured.slug}`}>Read the story <ArrowRight size={14} /></Link></div>
           </div>
         </section>

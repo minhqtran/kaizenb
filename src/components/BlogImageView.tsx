@@ -1,7 +1,10 @@
-import { Fragment } from 'react'
 import { useEffect, useState } from 'react'
-import type { BlogImage } from '../types/post'
+import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
+import type { BlogImage, StoryBlock } from '../types/post'
 import { getImage } from '../services/imageStorage'
+import { safeMarkdownImageUrl, safeMarkdownUrl } from '../utils/markdown'
 
 export function BlogImageView({ image }: { image: BlogImage }) {
   const [storedSource, setStoredSource] = useState<{ key: string; url: string }>({ key: '', url: '' })
@@ -52,18 +55,49 @@ export function ArticleImages({ images }: { images: BlogImage[] }) {
   ) : group.images.map((image) => <BlogImageView image={image} key={image.id} />))}</>
 }
 
-export function ArticleBody({ body, images }: { body: string; images: BlogImage[] }) {
-  const paragraphs = body.split(/\n\s*\n/).filter(Boolean)
-  const inlineImages = images.filter((image) => image.layout === 'inline')
-  let nextImage = 0
+const markdownPlugins = [remarkGfm]
+const markdownSanitizers = [rehypeSanitize]
 
-  return (
-    <div className="article-body">
-      {paragraphs.map((paragraph, index) => {
-        const image = inlineImages[nextImage++]
-        return <Fragment key={`${index}-${paragraph.slice(0, 20)}`}><p>{paragraph}</p>{image && <BlogImageView image={image} key={image.id} />}</Fragment>
-      })}
-      {inlineImages.slice(nextImage).map((image) => <BlogImageView image={image} key={image.id} />)}
-    </div>
-  )
+export function ArticleBody({ body, images, contentBlocks }: { body: string; images: BlogImage[]; contentBlocks?: StoryBlock[] }) {
+  const imageById = new Map(images.map((image) => [image.id, image]))
+  const blocks = contentBlocks ?? [
+    ...(body ? [{ id: 'legacy-body', type: 'markdown' as const, content: body }] : []),
+    ...images.map((image) => ({ id: `legacy-${image.id}`, type: 'image' as const, imageId: image.id })),
+  ]
+  const rendered: React.ReactNode[] = []
+
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index]
+    if (block.type === 'markdown') {
+      rendered.push(<ReactMarkdown key={block.id} remarkPlugins={markdownPlugins} rehypePlugins={markdownSanitizers} urlTransform={safeMarkdownUrl} components={{
+        a: ({ href, children, ...props }) => {
+          const safeHref = safeMarkdownUrl(href ?? '')
+          return <a href={safeHref} target={safeHref?.startsWith('http') ? '_blank' : undefined} rel={safeHref?.startsWith('http') ? 'noopener noreferrer' : undefined} {...props}>{children}</a>
+        },
+        img: ({ src, alt }) => {
+          const safeSource = safeMarkdownImageUrl(src)
+          return safeSource ? <img src={safeSource} alt={alt ?? ''} loading="lazy" /> : null
+        },
+      }}>{block.content}</ReactMarkdown>)
+      continue
+    }
+
+    const image = imageById.get(block.imageId)
+    if (!image) continue
+    if (image.layout === 'side-by-side') {
+      const group: BlogImage[] = [image]
+      while (index + 1 < blocks.length && blocks[index + 1].type === 'image') {
+        const nextImage = imageById.get((blocks[index + 1] as Extract<StoryBlock, { type: 'image' }>).imageId)
+        if (!nextImage || nextImage.layout !== 'side-by-side') break
+        group.push(nextImage)
+        index += 1
+      }
+      rendered.push(<div className="article-image-gallery" key={group.map((entry) => entry.id).join('-')}>{group.map((entry) => <BlogImageView image={entry} key={entry.id} />)}</div>)
+    } else {
+      rendered.push(<BlogImageView image={image} key={block.id} />)
+    }
+  }
+
+  return <div className="article-body">{rendered.length ? rendered : <p>{body}</p>}</div>
 }
+

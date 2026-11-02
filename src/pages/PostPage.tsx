@@ -2,7 +2,8 @@ import { ArrowLeft, PenLine } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { ArticleBody, ArticleImages, BlogImageView } from '../components/BlogImageView'
+import { ArticleBody } from '../components/BlogImageView'
+import { UserAvatar } from '../components/UserAvatar'
 import { canEditPost } from '../services/permissions'
 import { getPost } from '../services/posts'
 import type { BlogPost } from '../types/post'
@@ -34,12 +35,10 @@ export function PostPage() {
       <Link className="back-link" to="/"><ArrowLeft size={14} /> All stories</Link>
       <header className="article-header">
         <div className="eyebrow">{post.category}{post.status === 'draft' ? ' · Draft preview' : ''}</div><h1>{post.title}</h1><p className="article-excerpt">{post.excerpt}</p>
-        <div className="article-byline">{post.authorAvatarUrl && <img className="author-avatar" src={post.authorAvatarUrl} alt="" />}<span><strong>{post.authorName}</strong><br />{formatDate(post.publishedAt ?? post.createdAt)} · {readingTime(post.body)} min read</span></div>
+        <div className="article-byline">{(post.authorAvatarUrl || post.authorAvatarStorageKey) && <UserAvatar className="author-avatar" displayName={post.authorName} imageKey={post.authorAvatarStorageKey} imageUrl={post.authorAvatarUrl} />}<span><strong>{post.authorName}</strong><br />{formatDate(post.publishedAt ?? post.createdAt)} · {readingTime(post.body)} min read</span></div>
       </header>
       {canEditPost(user, post.authorId) && <div className="article-actions"><Link className="button secondary" to={`/write/${post.slug}`}><PenLine size={14} /> Edit story</Link></div>}
-      {post.images.find((image) => image.layout === 'featured') && <div className="article-cover"><BlogImageView image={post.images.find((image) => image.layout === 'featured')!} /></div>}
-      <ArticleBody body={post.body} images={post.images} />
-      <ArticleImages images={post.images} />
+      <ArticleBody body={post.body} images={post.images} contentBlocks={post.contentBlocks} />
     </article>
   )
 }
