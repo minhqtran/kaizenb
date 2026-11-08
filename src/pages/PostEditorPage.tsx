@@ -92,8 +92,18 @@ export function PostEditorPage() {
       const post = slug
         ? await updatePost(slug, input, user)
         : await createPost(input, user);
-      await removeImages(removedImages);
-      navigate(`/posts/${post.slug}`);
+      let cleanupNotice = "";
+      try {
+        await removeImages(removedImages);
+      } catch (cause) {
+        cleanupNotice =
+          cause instanceof Error
+            ? `Story saved, but removed image cleanup failed: ${cause.message}`
+            : "Story saved, but removed images could not be cleaned up.";
+      }
+      navigate(`/posts/${post.slug}`, {
+        state: cleanupNotice ? { notice: cleanupNotice } : null,
+      });
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Unable to save this story.",
@@ -118,19 +128,21 @@ export function PostEditorPage() {
       return;
     }
     setError("");
+    const uploadedKeys: string[] = [];
     try {
-      const added = await Promise.all(
-        files.map(
-          async (file): Promise<BlogImage> => ({
-            id: crypto.randomUUID(),
-            src: "",
-            storageKey: await saveImage(file),
-            alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
-            layout: "full-width",
-            size: "full",
-          }),
-        ),
-      );
+      const added: BlogImage[] = [];
+      for (const file of files) {
+        const storageKey = await saveImage(file, "post-images");
+        uploadedKeys.push(storageKey);
+        added.push({
+          id: crypto.randomUUID(),
+          src: "",
+          storageKey,
+          alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
+          layout: "full-width",
+          size: "full",
+        });
+      }
       const imageBlocks = added.map(
         (image): StoryBlock => ({
           id: crypto.randomUUID(),
@@ -161,11 +173,16 @@ export function PostEditorPage() {
         return withContentBlocks(current, blocks, nextImages);
       });
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Unable to store these images.",
-      );
+      let message =
+        cause instanceof Error ? cause.message : "Unable to store these images.";
+      if (uploadedKeys.length) {
+        try {
+          await removeImages(uploadedKeys);
+        } catch (cleanupCause) {
+          message += ` ${cleanupCause instanceof Error ? cleanupCause.message : "Uploaded images could not be cleaned up."}`;
+        }
+      }
+      setError(message);
     }
   }
 

@@ -16,6 +16,7 @@ export function UserAvatar({
     key: "",
     url: "",
   });
+  const [failedKey, setFailedKey] = useState("");
 
   useEffect(() => {
     if (!imageKey) return;
@@ -23,11 +24,17 @@ export function UserAvatar({
     let objectUrl = "";
     getImage(imageKey)
       .then((blob) => {
-        if (!blob || !active) return;
+        if (!active) return;
+        if (!blob) {
+          setFailedKey(imageKey);
+          return;
+        }
         objectUrl = URL.createObjectURL(blob);
         setStoredImage({ key: imageKey, url: objectUrl });
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setFailedKey(imageKey);
+      });
     return () => {
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -45,7 +52,12 @@ export function UserAvatar({
     <span
       className={`${className} avatar-fallback`}
       role="img"
-      aria-label={displayName}
+      aria-label={
+        failedKey === imageKey
+          ? `${displayName}, profile image unavailable`
+          : displayName
+      }
+      title={failedKey === imageKey ? "Profile image unavailable" : undefined}
     >
       {displayName.trim().slice(0, 1).toUpperCase() || "?"}
     </span>

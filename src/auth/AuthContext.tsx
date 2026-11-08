@@ -1,50 +1,124 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import type { AppUser, GoogleIdentity, UserRole } from "../types/user";
+import type { Session } from "@supabase/supabase-js";
+import type { AppUser, UserRole } from "../types/user";
 import {
   changeUserRole,
-  getSessionUser,
+  getProfile,
   getUsers,
-  signInUser,
   signOutUser,
+  startGoogleSignIn,
   updateUserProfile,
 } from "../services/users";
-import { disableGoogleAutoSelect } from "../services/googleIdentity";
+import { getSupabaseClient, isSupabaseConfigured } from "../services/supabase";
 import { AuthContext } from "./context";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AppUser | null>(() => getSessionUser());
-  const [users, setUsers] = useState<AppUser[]>(() => getUsers());
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [loading, setLoading] = useState(isSupabaseConfigured);
+  const [error, setError] = useState("");
 
-  function signIn(identity: GoogleIdentity) {
-    const nextUser = signInUser(identity);
-    setUser(nextUser);
-    setUsers(getUsers());
-    return nextUser;
-  }
+  const applySession = useCallback(async (session: Session | null) => {
+    if (!session?.user) {
+      setUser(null);
+      setUsers([]);
+      setError("");
+      setLoading(false);
+      return;
+    }
 
-  function signOut() {
-    signOutUser();
-    disableGoogleAutoSelect();
-    setUser(null);
-  }
+    setLoading(true);
+    try {
+      const profile = await getProfile(session.user);
+      setUser(profile);
+      setError("");
+      if (profile.role === "admin") {
+        try {
+          setUsers(await getUsers());
+        } catch (cause) {
+          setUsers([]);
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "Unable to load people.",
+          );
+        }
+      } else {
+        setUsers([]);
+      }
+    } catch (cause) {
+      setUser(null);
+      setUsers([]);
+      setError(
+        cause instanceof Error ? cause.message : "Unable to load your account.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  function setUserRole(targetId: string, role: UserRole) {
-    if (!user) throw new Error("Sign in before managing users.");
-    setUsers(changeUserRole(user.id, targetId, role));
-  }
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
 
-  function updateProfile(nickname: string, profileImageKey: string | null) {
-    if (!user) throw new Error("Sign in before updating your profile.");
-    const updatedUser = updateUserProfile(user.id, nickname, profileImageKey);
-    setUser(updatedUser);
-    setUsers(getUsers());
-    return updatedUser;
-  }
+    const client = getSupabaseClient();
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((_event, session) => {
+      queueMicrotask(() => void applySession(session));
+    });
+    return () => subscription.unsubscribe();
+  }, [applySession]);
+
+  const signIn = useCallback(async () => {
+    setError("");
+    await startGoogleSignIn();
+  }, []);
+
+  const signOut = useCallback(async () => {
+    setError("");
+    try {
+      await signOutUser();
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : "Unable to sign out.";
+      setError(message);
+    }
+  }, []);
+
+  const setUserRole = useCallback(async (targetId: string, role: UserRole) => {
+    const updatedUsers = await changeUserRole(targetId, role);
+    setUsers(updatedUsers);
+  }, []);
+
+  const updateProfile = useCallback(
+    async (nickname: string, profileImageKey: string | null) => {
+      const updatedUser = await updateUserProfile(nickname, profileImageKey);
+      setUser(updatedUser);
+      setUsers((current) =>
+        current.map((entry) =>
+          entry.id === updatedUser.id ? updatedUser : entry,
+        ),
+      );
+      return updatedUser;
+    },
+    [],
+  );
 
   return (
     <AuthContext.Provider
-      value={{ user, users, signIn, signOut, setUserRole, updateProfile }}
+      value={{
+        user,
+        users,
+        loading,
+        error,
+        signIn,
+        signOut,
+        setUserRole,
+        updateProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>

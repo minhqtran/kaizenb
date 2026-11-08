@@ -12,6 +12,7 @@ export function BlogImageView({ image }: { image: BlogImage }) {
     url: string;
   }>({ key: "", url: "" });
   const [failedSource, setFailedSource] = useState("");
+  const [failedStorageKey, setFailedStorageKey] = useState("");
 
   useEffect(() => {
     if (!image.storageKey) return;
@@ -19,11 +20,17 @@ export function BlogImageView({ image }: { image: BlogImage }) {
     let objectUrl = "";
     getImage(image.storageKey)
       .then((blob) => {
-        if (!blob || !active) return;
+        if (!active) return;
+        if (!blob) {
+          setFailedStorageKey(image.storageKey!);
+          return;
+        }
         objectUrl = URL.createObjectURL(blob);
         setStoredSource({ key: image.storageKey!, url: objectUrl });
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setFailedStorageKey(image.storageKey!);
+      });
     return () => {
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -36,6 +43,9 @@ export function BlogImageView({ image }: { image: BlogImage }) {
       : ""
     : image.src;
   const imageFailed = Boolean(source && failedSource === source);
+  const storageFailed = Boolean(
+    image.storageKey && failedStorageKey === image.storageKey,
+  );
 
   return (
     <figure
@@ -47,12 +57,16 @@ export function BlogImageView({ image }: { image: BlogImage }) {
           alt={image.alt}
           onError={() => setFailedSource(source)}
         />
-      ) : source ? (
+      ) : source || storageFailed ? (
         <div className="image-placeholder" role="img" aria-label={image.alt}>
           Image unavailable: {image.alt}
         </div>
       ) : (
-        <div className="image-placeholder" aria-label="Image loading" />
+        <div
+          className="image-placeholder"
+          role="img"
+          aria-label={`Loading image: ${image.alt}`}
+        />
       )}
       {image.caption && <figcaption>{image.caption}</figcaption>}
     </figure>

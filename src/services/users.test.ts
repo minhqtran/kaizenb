@@ -1,148 +1,98 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   changeUserRole,
-  getSessionUser,
+  getProfile,
   getUsers,
-  signInUser,
-  signOutUser,
   updateUserProfile,
 } from "./users";
 
-function installStorage() {
-  const values = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
-    getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => values.set(key, value),
-    removeItem: (key: string) => values.delete(key),
-  });
-  vi.stubGlobal("window", new EventTarget());
+const { client } = vi.hoisted(() => ({
+  client: {
+    from: vi.fn(),
+    rpc: vi.fn(),
+    auth: { signInWithOAuth: vi.fn(), signOut: vi.fn() },
+  },
+}));
+
+vi.mock("./supabase", () => ({ getSupabaseClient: () => client }));
+
+const profile = {
+  id: "user-1",
+  email: "writer@example.test",
+  display_name: "Writer",
+  avatar_url: null,
+  nickname: "Story Name",
+  profile_image_path: "user-1/avatars/profile.webp",
+  role: "writer" as const,
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-02T00:00:00.000Z",
+};
+
+function installProfileQuery(result: { data: unknown; error: null }) {
+  const query = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    order: vi.fn(),
+    single: vi.fn().mockResolvedValue(result),
+  };
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  query.order.mockResolvedValue(result);
+  client.from.mockReturnValue(query);
 }
 
-describe("local user repository", () => {
+describe("Supabase user repository", () => {
   beforeEach(() => {
-    vi.unstubAllGlobals();
-    installStorage();
+    vi.clearAllMocks();
   });
 
-  it("restores a signed-in profile and defaults it to viewer", () => {
-    const user = signInUser({
-      googleSubject: "stable-google-sub",
-      email: "reader@example.test",
-      emailVerified: true,
-      displayName: "Reader",
-    });
-    expect(user).toMatchObject({
-      id: "stable-google-sub",
-      googleSubject: "stable-google-sub",
-      role: "viewer",
-    });
-    expect(getSessionUser()).toEqual(user);
-    expect(getUsers()).toEqual([user]);
-    signOutUser();
-    expect(getSessionUser()).toBeNull();
-  });
-
-  it("allows only an existing admin to promote viewers, never self-promote", () => {
-    const admin = {
-      id: "google-admin",
-      googleSubject: "google-admin",
-      email: "admin@example.test",
-      displayName: "Admin",
-      role: "admin",
-    };
-    const reader = {
-      id: "google-reader",
-      googleSubject: "google-reader",
-      email: "reader@example.test",
-      displayName: "Reader",
-      role: "viewer",
-    };
-    localStorage.setItem("goodword.users.v1", JSON.stringify([admin, reader]));
-    expect(() => changeUserRole(reader.id, admin.id, "admin")).toThrow(
-      "not allowed",
-    );
-    expect(() => changeUserRole(admin.id, admin.id, "writer")).toThrow(
-      "not allowed",
-    );
-    expect(changeUserRole(admin.id, reader.id, "writer")[1].role).toBe(
-      "writer",
-    );
-  });
-
-  it("keeps nickname and uploaded avatar overrides when Google identity refreshes", () => {
-    const identity = {
-      googleSubject: "profile-user",
-      email: "profile@example.test",
-      emailVerified: true,
-      displayName: "Google Name",
-    };
-    const user = signInUser(identity);
-    updateUserProfile(user.id, "  Story Name  ", "profile-image-key");
-    const refreshed = signInUser({
-      ...identity,
-      displayName: "Updated Google Name",
-      avatarUrl: "https://example.test/google.jpg",
-    });
-    expect(refreshed).toMatchObject({
-      displayName: "Updated Google Name",
+  it("maps the authenticated profile and shared role to the app user", async () => {
+    installProfileQuery({ data: profile, error: null });
+    await expect(
+      getProfile({ id: profile.id } as never),
+    ).resolves.toMatchObject({
+      id: profile.id,
       nickname: "Story Name",
-      profileImageKey: "profile-image-key",
-      avatarUrl: "https://example.test/google.jpg",
+      profileImageKey: "user-1/avatars/profile.webp",
+      role: "writer",
     });
-    expect(getSessionUser()).toEqual(refreshed);
   });
 
-  it("rejects empty or overlong nicknames", () => {
-    const user = signInUser({
-      googleSubject: "profile-user",
-      email: "profile@example.test",
-      emailVerified: true,
-      displayName: "Reader",
-    });
-    expect(() => updateUserProfile(user.id, "   ", null)).toThrow(
-      "between 1 and 40",
-    );
-    expect(() => updateUserProfile(user.id, "n".repeat(41), null)).toThrow(
-      "between 1 and 40",
-    );
+  it("loads the users list through the RLS-protected profiles table", async () => {
+    installProfileQuery({ data: [profile], error: null });
+    await expect(getUsers()).resolves.toMatchObject([
+      { id: profile.id, role: "writer" },
+    ]);
+    expect(client.from).toHaveBeenCalledWith("profiles");
   });
 
-  it("updates the author details on existing stories when a profile changes", () => {
-    localStorage.setItem(
-      "goodword.posts.v1",
-      JSON.stringify([
-        {
-          id: "existing-post",
-          slug: "existing-post",
-          title: "Existing story",
-          excerpt: "A saved story",
-          body: "Story text long enough for an existing published post.",
-          images: [],
-          category: "Thoughts",
-          authorId: "profile-user",
-          authorName: "Old name",
-          authorAvatarUrl: "https://example.test/old.jpg",
-          status: "published",
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-          publishedAt: "2026-01-01T00:00:00.000Z",
-        },
-      ]),
-    );
-    const user = signInUser({
-      googleSubject: "profile-user",
-      email: "profile@example.test",
-      emailVerified: true,
-      displayName: "Google Name",
+  it("uses the trusted role RPC and refreshes the admin users list", async () => {
+    client.rpc.mockResolvedValue({ data: null, error: null });
+    installProfileQuery({ data: [profile], error: null });
+    await expect(changeUserRole("user-1", "writer")).resolves.toMatchObject([
+      { id: profile.id, role: "writer" },
+    ]);
+    expect(client.rpc).toHaveBeenCalledWith("set_user_role", {
+      target_user_id: "user-1",
+      next_role: "writer",
     });
-    updateUserProfile(user.id, "New byline", "new-avatar-key");
-    const storedPosts = JSON.parse(
-      localStorage.getItem("goodword.posts.v1") ?? "[]",
-    ) as Array<Record<string, unknown>>;
-    expect(storedPosts[0]).toMatchObject({
-      authorName: "New byline",
-      authorAvatarStorageKey: "new-avatar-key",
+  });
+
+  it("rejects assigning admin through the client repository", async () => {
+    await expect(
+      changeUserRole("user-2", "admin"),
+    ).rejects.toThrow("Only viewer and writer");
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("persists profile edits through the profile RPC", async () => {
+    client.rpc.mockResolvedValue({ data: profile, error: null });
+    await expect(
+      updateUserProfile("Story Name", profile.profile_image_path),
+    ).resolves.toMatchObject({ nickname: "Story Name", role: "writer" });
+    expect(client.rpc).toHaveBeenCalledWith("update_my_profile", {
+      nickname_input: "Story Name",
+      profile_image_path_input: profile.profile_image_path,
     });
-    expect(storedPosts[0]).not.toHaveProperty("authorAvatarUrl");
   });
 });

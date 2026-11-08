@@ -1,13 +1,18 @@
 import { createContext } from "react";
-import type { AppUser, GoogleIdentity, UserRole } from "../types/user";
+import type { AppUser, UserRole } from "../types/user";
 
 export interface AuthContextValue {
   user: AppUser | null;
   users: AppUser[];
-  signIn: (identity: GoogleIdentity) => AppUser;
-  signOut: () => void;
-  setUserRole: (targetId: string, role: UserRole) => void;
-  updateProfile: (nickname: string, profileImageKey: string | null) => AppUser;
+  loading: boolean;
+  error: string;
+  signIn: () => Promise<void>;
+  signOut: () => Promise<void>;
+  setUserRole: (targetId: string, role: UserRole) => Promise<void>;
+  updateProfile: (
+    nickname: string,
+    profileImageKey: string | null,
+  ) => Promise<AppUser>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

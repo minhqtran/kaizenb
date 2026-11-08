@@ -61,27 +61,45 @@ export function AccountPage() {
     setSuccess("");
     const previousImageKey = user?.profileImageKey;
     let storedImageKey = "";
+    let profileUpdated = false;
     try {
       let nextImageKey = removeImage ? null : (previousImageKey ?? null);
       if (selectedImage) {
-        storedImageKey = await saveImage(selectedImage);
+        storedImageKey = await saveImage(selectedImage, "avatars");
         nextImageKey = storedImageKey;
       }
-      updateProfile(nickname, nextImageKey);
-      if (previousImageKey && previousImageKey !== nextImageKey)
-        void removeImages([previousImageKey]).catch(() => undefined);
+      await updateProfile(nickname, nextImageKey);
+      profileUpdated = true;
       setSelectedImage(null);
       setImagePreview(null);
       setRemoveImage(false);
       setSuccess("Your profile has been updated.");
+      if (previousImageKey && previousImageKey !== nextImageKey) {
+        try {
+          await removeImages([previousImageKey]);
+        } catch (cleanupCause) {
+          setError(
+            cleanupCause instanceof Error
+              ? `Profile updated, but old image cleanup failed: ${cleanupCause.message}`
+              : "Profile updated, but the old image could not be removed.",
+          );
+        }
+      }
     } catch (cause) {
-      if (storedImageKey)
-        void removeImages([storedImageKey]).catch(() => undefined);
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Unable to update your profile.",
-      );
+      let message =
+        cause instanceof Error ? cause.message : "Unable to update your profile.";
+      if (storedImageKey && !profileUpdated) {
+        try {
+          await removeImages([storedImageKey]);
+        } catch (cleanupCause) {
+          const cleanupMessage =
+            cleanupCause instanceof Error
+              ? cleanupCause.message
+              : "Unable to remove the unused uploaded image.";
+          message = `${message} ${cleanupMessage}`;
+        }
+      }
+      setError(message);
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,6 @@
 import { ArrowLeft, PenLine } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { ArticleBody } from "../components/BlogImageView";
 import { CopyPostLinkButton } from "../components/CopyPostLinkButton";
@@ -13,6 +13,7 @@ import { formatDate } from "../utils/formatDate";
 export function PostPage() {
   const { slug = "" } = useParams();
   const { user } = useAuth();
+  const location = useLocation();
   const [result, setResult] = useState<{
     slug: string;
     post?: BlogPost;
@@ -42,6 +43,13 @@ export function PostPage() {
 
   const post = result.slug === slug ? result.post : null;
   const error = result.slug === slug ? result.error : "";
+  const notice =
+    typeof location.state === "object" &&
+    location.state !== null &&
+    "notice" in location.state &&
+    typeof location.state.notice === "string"
+      ? location.state.notice
+      : "";
 
   if (error)
     return (
@@ -90,13 +98,15 @@ export function PostPage() {
           </span>
         </div>
       </header>
+      {notice && (
+        <p className="success-message" role="status">
+          {notice}
+        </p>
+      )}
       {(post.status === "published" || canEditPost(user, post.authorId)) && (
         <div className="article-actions">
           {post.status === "published" && (
-            <CopyPostLinkButton
-              slug={post.slug}
-              repositoryHosted={post.source === "repository"}
-            />
+            <CopyPostLinkButton slug={post.slug} />
           )}
           {canEditPost(user, post.authorId) && (
             <Link className="button secondary" to={`/write/${post.slug}`}>

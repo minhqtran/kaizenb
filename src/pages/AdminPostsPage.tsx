@@ -16,12 +16,16 @@ export function AdminPostsPage() {
   }, [user])
 
   async function remove(post: BlogPost) {
-    if (!user || !window.confirm(`Permanently remove “${post.title || 'Untitled story'}” from this browser?`)) return
+    if (!user || !window.confirm(`Permanently remove “${post.title || 'Untitled story'}” from shared storage?`)) return
     try {
       await deletePost(post.slug, user)
       setPosts((current) => current.filter((entry) => entry.id !== post.id))
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to remove this post.')
+      const message = cause instanceof Error ? cause.message : 'Unable to remove this post.'
+      if (message.startsWith('Story deleted,')) {
+        setPosts((current) => current.filter((entry) => entry.id !== post.id))
+      }
+      setError(message)
     }
   }
 

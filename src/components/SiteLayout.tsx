@@ -7,7 +7,7 @@ import { canWrite } from "../services/permissions";
 import { effectiveDisplayName } from "../types/user";
 
 export function SiteLayout() {
-  const { user, signOut } = useAuth();
+  const { user, error, signOut } = useAuth();
   const accountName = user ? effectiveDisplayName(user) : "";
   const location = useLocation();
   const [categoriesOpenAt, setCategoriesOpenAt] = useState<string | null>(null);
@@ -151,6 +151,13 @@ export function SiteLayout() {
           )}
         </div>
       </header>
+      {user && error && (
+        <div className="page-container">
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        </div>
+      )}
       <main key={location.pathname} className="page-enter">
         <Outlet />
       </main>

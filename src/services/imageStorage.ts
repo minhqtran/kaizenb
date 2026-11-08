@@ -1,5 +1,6 @@
-const databaseName = "goodword-media";
-const storeName = "images";
+import { getSupabaseClient } from "./supabase";
+
+const bucketName = "media";
 const allowedImageTypes = [
   "image/jpeg",
   "image/png",
@@ -19,55 +20,39 @@ export function validateImageFile(file: File) {
     );
 }
 
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(databaseName, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(storeName);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () =>
-      reject(new Error("Local image storage is unavailable in this browser."));
-  });
-}
+export async function saveImage(
+  file: File,
+  purpose: "post-images" | "avatars",
+): Promise<string> {
+  validateImageFile(file);
+  const client = getSupabaseClient();
+  const { data: userData, error: userError } = await client.auth.getUser();
+  if (userError) throw new Error(userError.message);
+  if (!userData.user) throw new Error("Sign in before uploading images.");
 
-export async function saveImage(file: File): Promise<string> {
-  const database = await openDatabase();
-  const key = crypto.randomUUID();
-  await new Promise<void>((resolve, reject) => {
-    const transaction = database.transaction(storeName, "readwrite");
-    transaction.objectStore(storeName).put(file, key);
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () =>
-      reject(new Error(`Unable to store ${file.name}.`));
+  const extension = file.name.split(".").pop()?.toLowerCase() || "img";
+  const key = `${userData.user.id}/${purpose}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await client.storage.from(bucketName).upload(key, file, {
+    cacheControl: "3600",
+    contentType: file.type,
+    upsert: false,
   });
-  database.close();
+  if (error) throw new Error(`Unable to upload ${file.name}: ${error.message}`);
   return key;
 }
 
 export async function getImage(key: string): Promise<Blob | null> {
-  const database = await openDatabase();
-  const result = await new Promise<Blob | null>((resolve, reject) => {
-    const request = database
-      .transaction(storeName, "readonly")
-      .objectStore(storeName)
-      .get(key);
-    request.onsuccess = () =>
-      resolve((request.result as Blob | undefined) ?? null);
-    request.onerror = () =>
-      reject(new Error("Unable to read this image from local storage."));
-  });
-  database.close();
-  return result;
+  const { data, error } = await getSupabaseClient()
+    .storage.from(bucketName)
+    .download(key);
+  if (error) throw new Error(`Unable to load image: ${error.message}`);
+  return data;
 }
 
 export async function removeImages(keys: string[]) {
   if (!keys.length) return;
-  const database = await openDatabase();
-  await new Promise<void>((resolve, reject) => {
-    const transaction = database.transaction(storeName, "readwrite");
-    keys.forEach((key) => transaction.objectStore(storeName).delete(key));
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () =>
-      reject(new Error("Unable to clean up removed images."));
-  });
-  database.close();
+  const { error } = await getSupabaseClient()
+    .storage.from(bucketName)
+    .remove(keys);
+  if (error) throw new Error(`Unable to remove images: ${error.message}`);
 }

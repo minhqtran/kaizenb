@@ -1,12 +1,28 @@
-import { sourcePosts } from "../content/posts";
-import { mockPosts } from "../data/mockPosts";
 import { effectiveDisplayName, type AppUser } from "../types/user";
 import type { BlogImage, BlogPost, PostInput, StoryBlock } from "../types/post";
 import { createSlug } from "../utils/formatDate";
 import { removeImages } from "./imageStorage";
+import { getSupabaseClient } from "./supabase";
 import { canAdmin, canEditPost, canWrite } from "./permissions";
 
-const postsKey = "goodword.posts.v1";
+type PostRow = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  content_blocks: StoryBlock[];
+  category: string;
+  images: BlogImage[];
+  author_id: string;
+  author_name: string;
+  author_avatar_url: string | null;
+  author_avatar_storage_key: string | null;
+  status: BlogPost["status"];
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+};
 
 function legacyContentBlocks(body: string, images: BlogImage[]): StoryBlock[] {
   const blocks: StoryBlock[] = [];
@@ -39,8 +55,15 @@ function legacyContentBlocks(body: string, images: BlogImage[]): StoryBlock[] {
           imageId: inlineImage.id,
         });
     });
-  inlineImages
-    .slice(inlineIndex)
+  inlineImages.slice(inlineIndex).forEach((image) =>
+    blocks.push({
+      id: `image-${image.id}`,
+      type: "image",
+      imageId: image.id,
+    }),
+  );
+  images
+    .filter((image) => image.layout !== "featured" && image.layout !== "inline")
     .forEach((image) =>
       blocks.push({
         id: `image-${image.id}`,
@@ -48,63 +71,38 @@ function legacyContentBlocks(body: string, images: BlogImage[]): StoryBlock[] {
         imageId: image.id,
       }),
     );
-  images
-    .filter((image) => image.layout !== "featured" && image.layout !== "inline")
-    .forEach((image) => {
-      blocks.push({
-        id: `image-${image.id}`,
-        type: "image",
-        imageId: image.id,
-      });
-    });
   return blocks;
 }
 
-function normalizePost(post: BlogPost): BlogPost {
+function normalizePost(post: PostRow): BlogPost {
   const images = (post.images ?? []).map((image) => ({
     ...image,
     size: image.size ?? "full",
   }));
   return {
-    ...post,
-    images,
-    contentBlocks: Array.isArray(post.contentBlocks)
-      ? post.contentBlocks
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    body: post.body,
+    contentBlocks: Array.isArray(post.content_blocks)
+      ? post.content_blocks
       : legacyContentBlocks(post.body ?? "", images),
+    category: post.category,
+    images,
+    authorId: post.author_id,
+    authorName: post.author_name,
+    ...(post.author_avatar_url
+      ? { authorAvatarUrl: post.author_avatar_url }
+      : {}),
+    ...(post.author_avatar_storage_key
+      ? { authorAvatarStorageKey: post.author_avatar_storage_key }
+      : {}),
+    status: post.status,
+    createdAt: post.created_at,
+    updatedAt: post.updated_at,
+    ...(post.published_at ? { publishedAt: post.published_at } : {}),
   };
-}
-
-function readPosts(): BlogPost[] {
-  try {
-    const raw = localStorage.getItem(postsKey);
-    if (!raw) {
-      const seededPosts = mockPosts.map(normalizePost);
-      localStorage.setItem(postsKey, JSON.stringify(seededPosts));
-      return seededPosts;
-    }
-    const posts: unknown = JSON.parse(raw);
-    return Array.isArray(posts)
-      ? (posts as BlogPost[]).map(normalizePost)
-      : mockPosts.map(normalizePost);
-  } catch {
-    return mockPosts.map(normalizePost);
-  }
-}
-
-function writePosts(posts: BlogPost[]) {
-  localStorage.setItem(postsKey, JSON.stringify(posts));
-}
-
-function uniqueSlug(title: string, posts: BlogPost[], currentId?: string) {
-  const base = createSlug(title) || `story-${Date.now()}`;
-  let slug = base;
-  let suffix = 2;
-  while (
-    sourcePosts.some((post) => post.slug === slug) ||
-    posts.some((post) => post.slug === slug && post.id !== currentId)
-  )
-    slug = `${base}-${suffix++}`;
-  return slug;
 }
 
 function validateForPublish(input: PostInput) {
@@ -127,44 +125,84 @@ function validateForPublish(input: PostInput) {
   }
 }
 
+function throwPostError(error: { code?: string; message: string }): never {
+  throw new Error(error.message || "Unable to save this story.");
+}
+
+function rowFromInput(
+  input: PostInput,
+  author: AppUser,
+  slug: string,
+  id?: string,
+) {
+  return {
+    ...(id ? { id } : {}),
+    slug,
+    title: input.title.trim(),
+    excerpt: input.excerpt.trim(),
+    body: input.body,
+    content_blocks:
+      input.contentBlocks ?? legacyContentBlocks(input.body, input.images),
+    category: input.category,
+    images: input.images,
+    author_id: author.id,
+    author_name: effectiveDisplayName(author),
+    author_avatar_url: author.profileImageKey ? null : (author.avatarUrl ?? null),
+    author_avatar_storage_key: author.profileImageKey ?? null,
+    status: input.status,
+  };
+}
+
 export async function getPosts(): Promise<BlogPost[]> {
-  const sourceSlugs = new Set(sourcePosts.map((post) => post.slug));
-  return [
-    ...sourcePosts,
-    ...readPosts().filter(
-      (post) => post.status === "published" && !sourceSlugs.has(post.slug),
-    ),
-  ]
-    .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+  const { data, error } = await getSupabaseClient()
+    .from("posts")
+    .select("*")
+    .eq("status", "published")
+    .order("published_at", { ascending: false });
+  if (error) throw new Error(error.message || "Unable to load stories.");
+  if (!data) throw new Error("The shared story list could not be read.");
+  return (data as PostRow[]).map(normalizePost);
 }
 
 export async function getAllPosts(actor: AppUser): Promise<BlogPost[]> {
   if (!canAdmin(actor)) throw new Error("Only admins can manage all posts.");
-  return readPosts().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const { data, error } = await getSupabaseClient()
+    .from("posts")
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(error.message || "Unable to load posts.");
+  if (!data) throw new Error("The shared story list could not be read.");
+  return (data as PostRow[]).map(normalizePost);
 }
 
 export async function getMyPosts(actor: AppUser): Promise<BlogPost[]> {
   if (!canWrite(actor))
     throw new Error("Writer access is required to view your stories.");
-  return readPosts()
-    .filter((post) => actor.role === "admin" || post.authorId === actor.id)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  let query = getSupabaseClient()
+    .from("posts")
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (!canAdmin(actor)) query = query.eq("author_id", actor.id);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message || "Unable to load your stories.");
+  if (!data) throw new Error("Your shared stories could not be read.");
+  return (data as PostRow[]).map(normalizePost);
 }
 
 export async function getPost(
   slug: string,
   actor?: AppUser | null,
 ): Promise<BlogPost> {
-  const sourcePost = sourcePosts.find((post) => post.slug === slug);
-  if (sourcePost) return sourcePost;
-
-  const post = readPosts().find((item) => item.slug === slug);
-  if (
-    !post ||
-    (post.status === "draft" && !canEditPost(actor, post.authorId))
-  ) {
+  const { data, error } = await getSupabaseClient()
+    .from("posts")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw new Error(error.message || "Unable to load this story.");
+  if (!data) throw new Error("This story could not be found.");
+  const post = normalizePost(data as PostRow);
+  if (post.status === "draft" && !canEditPost(actor, post.authorId))
     throw new Error("This story could not be found.");
-  }
   return post;
 }
 
@@ -175,28 +213,19 @@ export async function createPost(
   if (!canWrite(actor))
     throw new Error("Writer access is required to create stories.");
   if (input.status === "published") validateForPublish(input);
-  const posts = readPosts();
-  const now = new Date().toISOString();
-  const post: BlogPost = {
-    ...input,
-    contentBlocks:
-      input.contentBlocks ?? legacyContentBlocks(input.body, input.images),
-    id: crypto.randomUUID(),
-    slug: uniqueSlug(input.slug || input.title, posts),
-    authorId: actor.id,
-    authorName: effectiveDisplayName(actor),
-    ...(!actor.profileImageKey && actor.avatarUrl
-      ? { authorAvatarUrl: actor.avatarUrl }
-      : {}),
-    ...(actor.profileImageKey
-      ? { authorAvatarStorageKey: actor.profileImageKey }
-      : {}),
-    createdAt: now,
-    updatedAt: now,
-    ...(input.status === "published" ? { publishedAt: now } : {}),
-  };
-  writePosts([post, ...posts]);
-  return post;
+  const baseSlug = createSlug(input.slug || input.title) || `story-${Date.now()}`;
+  for (let suffix = 1; suffix <= 100; suffix += 1) {
+    const slug = suffix === 1 ? baseSlug : `${baseSlug}-${suffix}`;
+    const { data, error } = await getSupabaseClient()
+      .from("posts")
+      .insert(rowFromInput(input, actor, slug))
+      .select("*")
+      .single();
+    if (!error && data) return normalizePost(data as PostRow);
+    if (!error) throw new Error("The saved story was not returned.");
+    if (error.code !== "23505") throwPostError(error);
+  }
+  throw new Error("Unable to find an available URL for this story.");
 }
 
 export async function updatePost(
@@ -204,65 +233,54 @@ export async function updatePost(
   input: PostInput,
   actor: AppUser,
 ): Promise<BlogPost> {
-  const posts = readPosts();
-  const existing = posts.find((post) => post.slug === slug);
-  if (!existing || !canEditPost(actor, existing.authorId))
+  const existing = await getPost(slug, actor);
+  if (!canEditPost(actor, existing.authorId))
     throw new Error("You cannot edit this story.");
   if (input.status === "published") validateForPublish(input);
-  const updated: BlogPost = {
-    ...existing,
-    ...input,
-    contentBlocks:
-      input.contentBlocks ?? legacyContentBlocks(input.body, input.images),
-    id: existing.id,
-    slug: uniqueSlug(input.slug || input.title, posts, existing.id),
-    authorId: existing.authorId,
-    authorName: existing.authorName,
-    ...(existing.authorAvatarUrl
-      ? { authorAvatarUrl: existing.authorAvatarUrl }
-      : {}),
-    ...(existing.authorAvatarStorageKey
-      ? { authorAvatarStorageKey: existing.authorAvatarStorageKey }
-      : {}),
-    updatedAt: new Date().toISOString(),
-    ...(input.status === "published"
-      ? { publishedAt: existing.publishedAt ?? new Date().toISOString() }
-      : { publishedAt: undefined }),
+  const baseSlug = createSlug(input.slug || input.title) || `story-${Date.now()}`;
+  const author = {
+    ...actor,
+    id: existing.authorId,
+    displayName: existing.authorName,
+    avatarUrl: existing.authorAvatarUrl,
+    profileImageKey: existing.authorAvatarStorageKey,
   };
-  writePosts(posts.map((post) => (post.id === existing.id ? updated : post)));
-  return updated;
+  for (let suffix = 1; suffix <= 100; suffix += 1) {
+    const slug = suffix === 1 ? baseSlug : `${baseSlug}-${suffix}`;
+    const { data, error } = await getSupabaseClient()
+      .from("posts")
+      .update(rowFromInput(input, author, slug, existing.id))
+      .eq("id", existing.id)
+      .select("*")
+      .single();
+    if (!error && data) return normalizePost(data as PostRow);
+    if (!error) throw new Error("The updated story was not returned.");
+    if (error.code !== "23505") throwPostError(error);
+  }
+  throw new Error("Unable to find an available URL for this story.");
 }
 
 export async function deletePost(slug: string, actor: AppUser): Promise<void> {
   if (!canAdmin(actor)) throw new Error("Only admins can remove posts.");
-  const posts = readPosts();
-  const post = posts.find((entry) => entry.slug === slug);
-  if (!post) throw new Error("This story could not be found.");
-  await removeImages(
-    post.images
-      .map((image) => image.storageKey)
-      .filter((key): key is string => Boolean(key)),
-  );
-  writePosts(posts.filter((entry) => entry.id !== post.id));
-}
-
-export function updatePostsAuthorProfile(
-  authorId: string,
-  authorName: string,
-  avatarUrl?: string,
-  avatarStorageKey?: string,
-) {
-  const posts = readPosts().map((post) =>
-    post.authorId === authorId
-      ? {
-          ...post,
-          authorName,
-          authorAvatarUrl: avatarStorageKey ? undefined : avatarUrl,
-          authorAvatarStorageKey: avatarStorageKey,
-        }
-      : post,
-  );
-  writePosts(posts);
+  const existing = await getPost(slug, actor);
+  const { error } = await getSupabaseClient()
+    .from("posts")
+    .delete()
+    .eq("id", existing.id);
+  if (error) throw new Error(error.message || "Unable to remove this story.");
+  try {
+    await removeImages(
+      existing.images
+        .map((image) => image.storageKey)
+        .filter((key): key is string => Boolean(key)),
+    );
+  } catch (cause) {
+    const message =
+      cause instanceof Error ? cause.message : "Unable to remove story images.";
+    throw new Error(`Story deleted, but image cleanup failed: ${message}`, {
+      cause,
+    });
+  }
 }
 
 export async function getPostsByCategory(

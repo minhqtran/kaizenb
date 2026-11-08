@@ -4,8 +4,11 @@ import { canAdmin, canWrite } from "../services/permissions";
 import type { UserRole } from "../types/user";
 
 export function RequireRole({ minimumRole }: { minimumRole: UserRole }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
+
+  if (loading)
+    return <div className="loading-state">Checking your account...</div>;
 
   if (!user)
     return (

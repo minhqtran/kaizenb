@@ -55,7 +55,7 @@ export function HomePage() {
         <div className="error-state" role="alert">
           {error}
           <br />
-          Check the Django API or enable mock mode in your environment.
+          Check the Supabase project configuration and try again.
         </div>
       )}
       {!loading && !error && featured && (

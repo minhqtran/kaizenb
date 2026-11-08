@@ -34,7 +34,6 @@ export interface BlogPost {
   authorName: string;
   authorAvatarUrl?: string;
   authorAvatarStorageKey?: string;
-  source?: "repository";
   status: BlogStatus;
   createdAt: string;
   updatedAt: string;

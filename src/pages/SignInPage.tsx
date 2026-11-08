@@ -1,11 +1,10 @@
 import { ArrowLeft } from 'lucide-react'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { GoogleSignInButton } from '../components/GoogleSignInButton'
 import { useAuth } from '../auth/useAuth'
 
 export function SignInPage() {
-  const { user } = useAuth()
-  const navigate = useNavigate()
+  const { user, error } = useAuth()
   const [searchParams] = useSearchParams()
   const next = searchParams.get('next')
   const destination = next?.startsWith('/') && !next.startsWith('//') ? next : '/'
@@ -19,8 +18,9 @@ export function SignInPage() {
         <div className="eyebrow">Goodword account</div>
         <h1>Come on in.</h1>
         <p>Sign in with Google to save your place, write stories, and join the conversation.</p>
-        <GoogleSignInButton onSignedIn={() => navigate(destination, { replace: true })} />
-        <p className="signin-note">This development prototype reads identity claims in your browser. It does not verify tokens or provide production-grade security.</p>
+        <GoogleSignInButton />
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <p className="signin-note">Google sign-in is verified by Supabase Auth. Access to drafts and writing tools is controlled by backend permissions.</p>
       </div>
     </section>
   )

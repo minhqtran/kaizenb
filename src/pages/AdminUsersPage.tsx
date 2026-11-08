@@ -6,11 +6,12 @@ import { effectiveDisplayName, type UserRole } from "../types/user";
 export function AdminUsersPage() {
   const { user, users, setUserRole } = useAuth();
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const orderedUsers = [...users].sort((a, b) =>
     effectiveDisplayName(a).localeCompare(effectiveDisplayName(b)),
   );
 
-  function changeRole(targetId: string, role: UserRole) {
+  async function changeRole(targetId: string, role: UserRole) {
     const target = users.find((entry) => entry.id === targetId);
     if (!target) return;
     const action =
@@ -22,11 +23,13 @@ export function AdminUsersPage() {
       !window.confirm(`Are you sure you want to ${action}?`)
     )
       return;
+    setError("");
+    setMessage("");
     try {
-      setUserRole(targetId, role);
+      await setUserRole(targetId, role);
       setMessage(`${effectiveDisplayName(target)} is now a ${role}.`);
     } catch (cause) {
-      setMessage(
+      setError(
         cause instanceof Error ? cause.message : "Unable to update this role.",
       );
     }
@@ -39,8 +42,13 @@ export function AdminUsersPage() {
           Supreme Leader · {user ? effectiveDisplayName(user) : ""}
         </div>
         <h1>People & permissions</h1>
-        <p>Role changes are stored in this browser for development only.</p>
+        <p>Role changes are checked and stored by the shared backend.</p>
       </div>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
       {message && (
         <p className="success-message" role="status">
           {message}
@@ -86,7 +94,7 @@ export function AdminUsersPage() {
                     <button
                       className="button secondary table-action"
                       type="button"
-                      onClick={() => changeRole(entry.id, "writer")}
+                      onClick={() => void changeRole(entry.id, "writer")}
                     >
                       Promote to Writer
                     </button>
@@ -94,7 +102,7 @@ export function AdminUsersPage() {
                     <button
                       className="button secondary table-action"
                       type="button"
-                      onClick={() => changeRole(entry.id, "viewer")}
+                      onClick={() => void changeRole(entry.id, "viewer")}
                     >
                       Revoke Writer
                     </button>
@@ -109,9 +117,8 @@ export function AdminUsersPage() {
         )}
       </div>
       <p className="security-note">
-        Browser roles are editable by the browser owner and are not an
-        authorization boundary. Enforce all permissions on a backend before
-        launch.
+        The database enforces role changes and post permissions. This page
+        cannot grant admin access.
       </p>
     </section>
   );
