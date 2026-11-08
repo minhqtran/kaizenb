@@ -5,6 +5,7 @@ export type BlogImageLayout =
   | "inline"
   | "side-by-side"
   | "framed";
+export type BlogImageSize = "small" | "medium" | "full";
 
 export interface BlogImage {
   id: string;
@@ -12,6 +13,7 @@ export interface BlogImage {
   alt: string;
   caption?: string;
   layout: BlogImageLayout;
+  size?: BlogImageSize;
   storageKey?: string;
 }
 

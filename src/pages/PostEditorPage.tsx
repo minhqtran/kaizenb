@@ -19,6 +19,7 @@ import { createPost, getPost, updatePost } from "../services/posts";
 import type {
   BlogImage,
   BlogImageLayout,
+  BlogImageSize,
   BlogPost,
   BlogStatus,
   PostInput,
@@ -44,6 +45,11 @@ const layoutOptions: Array<{ value: BlogImageLayout; label: string }> = [
   { value: "inline", label: "Inline image" },
   { value: "side-by-side", label: "Side-by-side gallery" },
   { value: "framed", label: "Framed image" },
+];
+const imageSizeOptions: Array<{ value: BlogImageSize; label: string }> = [
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "full", label: "Full width" },
 ];
 
 export function PostEditorPage() {
@@ -121,6 +127,7 @@ export function PostEditorPage() {
             storageKey: await saveImage(file),
             alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
             layout: "full-width",
+            size: "full",
           }),
         ),
       );
@@ -467,6 +474,28 @@ export function PostEditorPage() {
                             }
                             placeholder="Add a caption"
                           />
+                        </div>
+                        <div className="form-field">
+                          <label htmlFor={`size-${image.id}`}>Image size</label>
+                          <select
+                            id={`size-${image.id}`}
+                            value={image.size ?? "full"}
+                            onChange={(event) =>
+                              updateImage(image.id, {
+                                size: event.target.value as BlogImageSize,
+                              })
+                            }
+                          >
+                            {imageSizeOptions.map((option) => (
+                              <option value={option.value} key={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="form-hint">
+                            Resizes the image to fit while keeping the whole
+                            image visible.
+                          </span>
                         </div>
                         <div className="form-field">
                           <label htmlFor={`layout-${image.id}`}>

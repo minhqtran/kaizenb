@@ -36,7 +36,9 @@ export function BlogImageView({ image }: { image: BlogImage }) {
     : image.src;
 
   return (
-    <figure className={`blog-image image-${image.layout}`}>
+    <figure
+      className={`blog-image image-${image.layout} image-size-${image.size ?? "full"}`}
+    >
       {source ? (
         <img src={source} alt={image.alt} />
       ) : (

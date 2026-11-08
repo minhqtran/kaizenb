@@ -60,12 +60,16 @@ function legacyContentBlocks(body: string, images: BlogImage[]): StoryBlock[] {
 }
 
 function normalizePost(post: BlogPost): BlogPost {
+  const images = (post.images ?? []).map((image) => ({
+    ...image,
+    size: image.size ?? "full",
+  }));
   return {
     ...post,
-    images: post.images ?? [],
+    images,
     contentBlocks: Array.isArray(post.contentBlocks)
       ? post.contentBlocks
-      : legacyContentBlocks(post.body ?? "", post.images ?? []),
+      : legacyContentBlocks(post.body ?? "", images),
   };
 }
 

@@ -143,6 +143,11 @@ describe("local post repository", () => {
       ]),
     );
     const post = await getPost("legacy-post", writer);
+    expect(post.images.map((image) => image.size)).toEqual([
+      "full",
+      "full",
+      "full",
+    ]);
     expect(
       post.contentBlocks?.map((block) =>
         block.type === "image" ? block.imageId : block.content,
@@ -154,6 +159,28 @@ describe("local post repository", () => {
       "Second paragraph.",
       "end",
     ]);
+  });
+
+  it("persists each image size preset", async () => {
+    const post = await createPost(
+      {
+        ...input,
+        images: [
+          {
+            id: "sized-image",
+            src: "",
+            alt: "A sized image",
+            layout: "inline",
+            size: "small",
+          },
+        ],
+      },
+      writer,
+    );
+
+    await expect(getPost(post.slug, writer)).resolves.toMatchObject({
+      images: [{ id: "sized-image", size: "small" }],
+    });
   });
 
   it("persists ordered blocks and filters published stories by category", async () => {
