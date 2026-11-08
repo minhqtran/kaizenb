@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
 
 :root {
   --paper: #faf9f6;
@@ -6,8 +6,8 @@
   --muted: #76766f;
   --line: #e7e4dc;
   --coral: #c95841;
-  --sans: 'DM Sans', 'Segoe UI', sans-serif;
-  --serif: 'DM Serif Display', Georgia, serif;
+  --sans: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  --serif: 'Lora', Georgia, serif;
   color: var(--ink);
   background: var(--paper);
   font: 400 14px/1.5 var(--sans);
