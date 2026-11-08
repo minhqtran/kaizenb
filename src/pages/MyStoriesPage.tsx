@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { CopyPostLinkButton } from '../components/CopyPostLinkButton'
 import { getMyPosts } from '../services/posts'
 import type { BlogPost } from '../types/post'
 import { formatDate } from '../utils/formatDate'
@@ -23,7 +24,7 @@ export function MyStoriesPage() {
       {posts.length ? <div className="story-management-list">{posts.map((post) => (
         <article className="managed-story" key={post.id}>
           <div><span className={`status-pill status-${post.status}`}>{post.status}</span><h2>{post.title || 'Untitled story'}</h2><p>{post.excerpt}</p><small>Updated {formatDate(post.updatedAt)}{post.authorId !== user?.id ? ` · by ${post.authorName}` : ''}</small></div>
-          <div className="managed-story-actions"><Link className="button secondary" to={`/write/${post.slug}`}>Edit</Link>{post.status === 'published' && <Link className="text-link" to={`/posts/${post.slug}`}>Read</Link>}</div>
+          <div className="managed-story-actions"><Link className="button secondary" to={`/write/${post.slug}`}>Edit</Link>{post.status === 'published' && <><Link className="text-link" to={`/posts/${post.slug}`}>Read</Link><CopyPostLinkButton slug={post.slug} /></>}</div>
         </article>
       ))}</div> : !error && <div className="empty-state">You have not started a story yet. Your drafts and published work will live here.</div>}
     </section>

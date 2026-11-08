@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { ArticleBody } from "../components/BlogImageView";
+import { CopyPostLinkButton } from "../components/CopyPostLinkButton";
 import { UserAvatar } from "../components/UserAvatar";
 import { canEditPost } from "../services/permissions";
 import { getPost } from "../services/posts";
@@ -78,18 +79,30 @@ export function PostPage() {
             />
           )}
           <span>
-            <strong>{post.authorName}</strong>
-            <br />
+            {post.authorName && (
+              <>
+                <strong>{post.authorName}</strong>
+                <br />
+              </>
+            )}
             {formatDate(post.publishedAt ?? post.createdAt)} ·{" "}
             {readingTime(post.body)} min read
           </span>
         </div>
       </header>
-      {canEditPost(user, post.authorId) && (
+      {(post.status === "published" || canEditPost(user, post.authorId)) && (
         <div className="article-actions">
-          <Link className="button secondary" to={`/write/${post.slug}`}>
-            <PenLine size={14} /> Edit story
-          </Link>
+          {post.status === "published" && (
+            <CopyPostLinkButton
+              slug={post.slug}
+              repositoryHosted={post.source === "repository"}
+            />
+          )}
+          {canEditPost(user, post.authorId) && (
+            <Link className="button secondary" to={`/write/${post.slug}`}>
+              <PenLine size={14} /> Edit story
+            </Link>
+          )}
         </div>
       )}
       <ArticleBody

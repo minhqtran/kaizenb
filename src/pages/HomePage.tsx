@@ -88,7 +88,7 @@ export function HomePage() {
                 />
               )}
               <span>
-                {featured.authorName} ·{" "}
+                {featured.authorName && `${featured.authorName} · `}
                 {formatDate(featured.publishedAt ?? featured.createdAt)} ·{" "}
                 {readingTime(featured.body)} min read
               </span>

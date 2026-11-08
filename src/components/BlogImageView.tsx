@@ -11,6 +11,7 @@ export function BlogImageView({ image }: { image: BlogImage }) {
     key: string;
     url: string;
   }>({ key: "", url: "" });
+  const [failedSource, setFailedSource] = useState("");
 
   useEffect(() => {
     if (!image.storageKey) return;
@@ -34,13 +35,22 @@ export function BlogImageView({ image }: { image: BlogImage }) {
       ? storedSource.url
       : ""
     : image.src;
+  const imageFailed = Boolean(source && failedSource === source);
 
   return (
     <figure
       className={`blog-image image-${image.layout} image-size-${image.size ?? "full"}`}
     >
-      {source ? (
-        <img src={source} alt={image.alt} />
+      {source && !imageFailed ? (
+        <img
+          src={source}
+          alt={image.alt}
+          onError={() => setFailedSource(source)}
+        />
+      ) : source ? (
+        <div className="image-placeholder" role="img" aria-label={image.alt}>
+          Image unavailable: {image.alt}
+        </div>
       ) : (
         <div className="image-placeholder" aria-label="Image loading" />
       )}

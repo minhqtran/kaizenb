@@ -18,6 +18,7 @@ Set up the Google OAuth web client before sign-in will work. See the GIS setup b
 src/
   auth/         Auth context and session hook
   components/   Shared layout, guards, and image renderers
+  content/      Repository-hosted public posts
   data/         Seed article content
   pages/        Public, writer, and admin route screens
   services/     Google identity, role policy, local repositories, IndexedDB images
@@ -50,7 +51,9 @@ Use separate Google accounts or browser profiles to exercise these roles. Protot
 
 ## Authoring and storage
 
-Writers can save drafts, preview with the public article layout, publish, and edit their own work. Images support multiple selection, later additions, alt text, captions, reorder/remove controls, and featured, full-width, inline (inserted after article paragraphs in sequence), side-by-side, or framed layouts. Uploads accept JPEG, PNG, WebP, and GIF up to 8 MB each. Image blobs are kept in IndexedDB through `src/services/imageStorage.ts`; post/user metadata is kept in localStorage. Draft data persists in this browser only. External sample images still require a network connection.
+Writers can save drafts, preview with the public article layout, publish, and edit their own work. Images support multiple selection, later additions, alt text, captions, reorder/remove controls, and featured, full-width, inline (inserted after article paragraphs in sequence), side-by-side, or framed layouts. Uploads accept JPEG, PNG, WebP, and GIF up to 8 MB each. Image blobs are kept in IndexedDB through `src/services/imageStorage.ts`; post/user metadata is kept in localStorage. Drafts and posts written in the editor persist in that browser only and are not shared by the Copy link action.
+
+Posts in `src/content/posts/` are bundled with the site and readable without signing in from any browser. Add or edit a `BlogPost` there and export it from `src/content/posts/index.ts` to publish repository-hosted content; set the author's byline, and store any public post images as deployable assets and reference their public URLs. The Tâm sự 1 post's images belong in `public/images/posts/t-n-m-i-part-1/`; see that folder's README for the expected filenames. Repository-hosted posts take precedence over local posts with the same slug and are not editable through the browser editor. This is a temporary way to share selected posts; move these records and images to shared backend storage when one is available.
 
 ## Prototype security and production work
 

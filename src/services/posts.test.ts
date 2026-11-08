@@ -63,8 +63,74 @@ describe("local post repository", () => {
     expect(post.authorName).toBe(writer.displayName);
     expect(post.status).toBe("draft");
     expect(post.publishedAt).toBeUndefined();
-    expect(await getPosts()).toHaveLength(0);
+    expect((await getPosts()).some((entry) => entry.id === post.id)).toBe(
+      false,
+    );
     expect((await getMyPosts(writer))[0].id).toBe(post.id);
+  });
+
+  it("serves repository-hosted posts publicly without browser-local post data", async () => {
+    const publicPost = await getPost("t-n-m-i-part-1");
+
+    expect(publicPost).toMatchObject({
+      title: "Tâm sự 1",
+      status: "published",
+      source: "repository",
+    });
+    expect(await getPosts()).toContainEqual(publicPost);
+  });
+
+  it("keeps the four article sections and their image positions", async () => {
+    const publicPost = await getPost("t-n-m-i-part-1");
+    const sections = publicPost.contentBlocks?.filter(
+      (block): block is Extract<typeof block, { type: "markdown" }> =>
+        block.type === "markdown",
+    );
+
+    expect(sections).toHaveLength(4);
+    expect(sections?.map((section) => section.content)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("## Preface"),
+        expect.stringContaining("## Song 1: Ngày Lành Tháng Tốt"),
+        expect.stringContaining("## Song 2: Vì Anh Quá Đẹp Trai"),
+        expect.stringContaining("## Song 3: Cao Bồi và Con Mồi"),
+      ]),
+    );
+    expect(publicPost.images.map((image) => image.src)).toEqual([
+      "/images/posts/t-n-m-i-part-1/tan-mui-cover.jpg",
+      "/images/posts/t-n-m-i-part-1/image-2026-11-08-195924042.jpg",
+      "/images/posts/t-n-m-i-part-1/image-2026-11-08-195826964.jpg",
+    ]);
+    expect(
+      publicPost.contentBlocks?.map((block) =>
+        block.type === "image" ? block.imageId : "text",
+      ),
+    ).toEqual([
+      "text",
+      "tan-mui-cover",
+      "text",
+      "tan-mui-song-1",
+      "text",
+      "tan-mui-song-2",
+      "text",
+    ]);
+  });
+
+  it("prevents local posts from replacing repository-hosted content", async () => {
+    const localPost = await createPost(
+      {
+        ...input,
+        slug: "t-n-m-i-part-1",
+        title: "A local draft with a reserved slug",
+      },
+      writer,
+    );
+
+    expect(localPost.slug).toBe("t-n-m-i-part-1-2");
+    await expect(getPost("t-n-m-i-part-1")).resolves.toMatchObject({
+      title: "Tâm sự 1",
+      source: "repository",
+    });
   });
 
   it("hides drafts from viewers and other writers", async () => {
@@ -224,6 +290,6 @@ describe("local post repository", () => {
     );
     expect(
       (await getPostsByCategory(" music ")).map((post) => post.id),
-    ).toEqual([musicStory.id]);
+    ).toContain(musicStory.id);
   });
 });

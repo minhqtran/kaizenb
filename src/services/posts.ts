@@ -1,3 +1,4 @@
+import { sourcePosts } from "../content/posts";
 import { mockPosts } from "../data/mockPosts";
 import { effectiveDisplayName, type AppUser } from "../types/user";
 import type { BlogImage, BlogPost, PostInput, StoryBlock } from "../types/post";
@@ -98,7 +99,10 @@ function uniqueSlug(title: string, posts: BlogPost[], currentId?: string) {
   const base = createSlug(title) || `story-${Date.now()}`;
   let slug = base;
   let suffix = 2;
-  while (posts.some((post) => post.slug === slug && post.id !== currentId))
+  while (
+    sourcePosts.some((post) => post.slug === slug) ||
+    posts.some((post) => post.slug === slug && post.id !== currentId)
+  )
     slug = `${base}-${suffix++}`;
   return slug;
 }
@@ -124,8 +128,13 @@ function validateForPublish(input: PostInput) {
 }
 
 export async function getPosts(): Promise<BlogPost[]> {
-  return readPosts()
-    .filter((post) => post.status === "published")
+  const sourceSlugs = new Set(sourcePosts.map((post) => post.slug));
+  return [
+    ...sourcePosts,
+    ...readPosts().filter(
+      (post) => post.status === "published" && !sourceSlugs.has(post.slug),
+    ),
+  ]
     .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
 }
 
@@ -146,6 +155,9 @@ export async function getPost(
   slug: string,
   actor?: AppUser | null,
 ): Promise<BlogPost> {
+  const sourcePost = sourcePosts.find((post) => post.slug === slug);
+  if (sourcePost) return sourcePost;
+
   const post = readPosts().find((item) => item.slug === slug);
   if (
     !post ||
