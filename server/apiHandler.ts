@@ -3,8 +3,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import type { AppUser, UserRole } from "../src/types/user";
 import type { BlogImage, BlogPost, PostInput, StoryBlock } from "../src/types/post";
-import { createSlug } from "../src/utils/formatDate";
-import { legacyContentBlocks, validatePostInput } from "../src/services/postValidation";
+import { createSlug } from "../src/utils/formatDate.js";
+import { legacyContentBlocks, validatePostInput } from "../src/services/postValidation.js";
 
 type ApiRequest = IncomingMessage & { body?: unknown };
 type Actor = { user: User; profile: AppUser; client: SupabaseClient };

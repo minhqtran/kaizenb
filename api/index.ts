@@ -1,3 +1,3 @@
-import handler from "../server/apiHandler";
+import handler from "../server/apiHandler.js";
 
 export default handler;
