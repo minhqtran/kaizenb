@@ -137,7 +137,7 @@ export function SiteLayout() {
               <button
                 className="icon-button signout-button"
                 type="button"
-                onClick={signOut}
+                onClick={() => void signOut().catch(() => undefined)}
                 aria-label="Sign out"
                 title="Sign out"
               >

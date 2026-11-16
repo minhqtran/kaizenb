@@ -8,8 +8,12 @@ export function RequireRole({ minimumRole }: { minimumRole: UserRole }) {
   const location = useLocation();
 
   if (loading)
+<<<<<<< HEAD
     return <div className="loading-state">Checking your account...</div>;
 
+=======
+    return <div className="page-container loading-state">Checking your access...</div>;
+>>>>>>> e37e27e (let's see)
   if (!user)
     return (
       <Navigate

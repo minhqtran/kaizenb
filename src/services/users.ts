@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { User } from "@supabase/supabase-js";
 import type { AppUser, UserRole } from "../types/user";
 import { getSupabaseClient } from "./supabase";
@@ -86,3 +87,35 @@ export async function updateUserProfile(
   if (!data) throw new Error("The updated profile was not returned.");
   return toAppUser(data as ProfileRow);
 }
+=======
+import type { AppUser, UserRole } from "../types/user";
+import { apiRequest } from "./apiClient";
+
+export function getSessionUser(): Promise<AppUser> {
+  return apiRequest<AppUser>("profile");
+}
+
+export function getUsers(): Promise<AppUser[]> {
+  return apiRequest<AppUser[]>("users");
+}
+
+export function changeUserRole(
+  targetId: string,
+  nextRole: UserRole,
+): Promise<AppUser[]> {
+  return apiRequest<AppUser[]>(`users/${encodeURIComponent(targetId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role: nextRole }),
+  });
+}
+
+export function updateUserProfile(
+  nickname: string,
+  profileImageKey: string | null,
+): Promise<AppUser> {
+  return apiRequest<AppUser>("profile", {
+    method: "PATCH",
+    body: JSON.stringify({ nickname, profileImageKey }),
+  });
+}
+>>>>>>> e37e27e (let's see)

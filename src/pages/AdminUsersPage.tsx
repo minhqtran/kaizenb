@@ -42,7 +42,11 @@ export function AdminUsersPage() {
           Supreme Leader · {user ? effectiveDisplayName(user) : ""}
         </div>
         <h1>People & permissions</h1>
+<<<<<<< HEAD
         <p>Role changes are checked and stored by the shared backend.</p>
+=======
+        <p>Role changes are enforced by the API and database policies.</p>
+>>>>>>> e37e27e (let's see)
       </div>
       {error && (
         <p className="form-error" role="alert">
@@ -117,8 +121,13 @@ export function AdminUsersPage() {
         )}
       </div>
       <p className="security-note">
+<<<<<<< HEAD
         The database enforces role changes and post permissions. This page
         cannot grant admin access.
+=======
+        Role changes are limited to administrators and checked by Supabase
+        policies.
+>>>>>>> e37e27e (let's see)
       </p>
     </section>
   );

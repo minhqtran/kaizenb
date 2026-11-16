@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { effectiveDisplayName, type AppUser } from "../types/user";
 import type { BlogImage, BlogPost, PostInput, StoryBlock } from "../types/post";
 import { createSlug } from "../utils/formatDate";
@@ -124,6 +125,13 @@ function validateForPublish(input: PostInput) {
     throw new Error("Add alternative text to every image before publishing.");
   }
 }
+=======
+import type { AppUser } from "../types/user";
+import type { BlogPost, PostInput } from "../types/post";
+import { removeImages } from "./imageStorage";
+import { apiRequest } from "./apiClient";
+import { validatePostInput } from "./postValidation";
+>>>>>>> e37e27e (let's see)
 
 function throwPostError(error: { code?: string; message: string }): never {
   throw new Error(error.message || "Unable to save this story.");
@@ -154,6 +162,7 @@ function rowFromInput(
 }
 
 export async function getPosts(): Promise<BlogPost[]> {
+<<<<<<< HEAD
   const { data, error } = await getSupabaseClient()
     .from("posts")
     .select("*")
@@ -187,12 +196,26 @@ export async function getMyPosts(actor: AppUser): Promise<BlogPost[]> {
   if (error) throw new Error(error.message || "Unable to load your stories.");
   if (!data) throw new Error("Your shared stories could not be read.");
   return (data as PostRow[]).map(normalizePost);
+=======
+  return apiRequest<BlogPost[]>("posts");
+}
+
+export async function getAllPosts(actor: AppUser): Promise<BlogPost[]> {
+  void actor;
+  return apiRequest<BlogPost[]>("admin/posts");
+}
+
+export async function getMyPosts(actor: AppUser): Promise<BlogPost[]> {
+  void actor;
+  return apiRequest<BlogPost[]>("posts/mine");
+>>>>>>> e37e27e (let's see)
 }
 
 export async function getPost(
   slug: string,
   actor?: AppUser | null,
 ): Promise<BlogPost> {
+<<<<<<< HEAD
   const { data, error } = await getSupabaseClient()
     .from("posts")
     .select("*")
@@ -204,12 +227,17 @@ export async function getPost(
   if (post.status === "draft" && !canEditPost(actor, post.authorId))
     throw new Error("This story could not be found.");
   return post;
+=======
+  void actor;
+  return apiRequest<BlogPost>(`posts/${encodeURIComponent(slug)}`);
+>>>>>>> e37e27e (let's see)
 }
 
 export async function createPost(
   input: PostInput,
   actor: AppUser,
 ): Promise<BlogPost> {
+<<<<<<< HEAD
   if (!canWrite(actor))
     throw new Error("Writer access is required to create stories.");
   if (input.status === "published") validateForPublish(input);
@@ -226,6 +254,14 @@ export async function createPost(
     if (error.code !== "23505") throwPostError(error);
   }
   throw new Error("Unable to find an available URL for this story.");
+=======
+  void actor;
+  validatePostInput(input);
+  return apiRequest<BlogPost>("posts", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+>>>>>>> e37e27e (let's see)
 }
 
 export async function updatePost(
@@ -233,6 +269,7 @@ export async function updatePost(
   input: PostInput,
   actor: AppUser,
 ): Promise<BlogPost> {
+<<<<<<< HEAD
   const existing = await getPost(slug, actor);
   if (!canEditPost(actor, existing.authorId))
     throw new Error("You cannot edit this story.");
@@ -281,6 +318,23 @@ export async function deletePost(slug: string, actor: AppUser): Promise<void> {
       cause,
     });
   }
+=======
+  void actor;
+  validatePostInput(input);
+  return apiRequest<BlogPost>(`posts/${encodeURIComponent(slug)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deletePost(slug: string, actor: AppUser): Promise<void> {
+  void actor;
+  const { imageKeys } = await apiRequest<{ imageKeys: string[] }>(
+    `posts/${encodeURIComponent(slug)}`,
+    { method: "DELETE" },
+  );
+  await removeImages(imageKeys);
+>>>>>>> e37e27e (let's see)
 }
 
 export async function getPostsByCategory(

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+<<<<<<< HEAD
 import { getImage, removeImages, saveImage, validateImageFile } from "./imageStorage";
 
 const { client, bucket } = vi.hoisted(() => ({
@@ -14,10 +15,28 @@ const { client, bucket } = vi.hoisted(() => ({
 }));
 
 vi.mock("./supabase", () => ({ getSupabaseClient: () => client }));
+=======
+import { apiRequest } from "./apiClient";
+import { getImage, removeImages, saveImage, validateImageFile } from "./imageStorage";
+
+const { uploadToSignedUrl } = vi.hoisted(() => ({
+  uploadToSignedUrl: vi.fn(),
+}));
+
+vi.mock("./apiClient", () => ({ apiRequest: vi.fn() }));
+vi.mock("./supabaseClient", () => ({
+  getSupabaseClient: () => ({
+    storage: { from: () => ({ uploadToSignedUrl }) },
+  }),
+}));
+
+const requestMock = vi.mocked(apiRequest);
+>>>>>>> e37e27e (let's see)
 
 describe("profile image validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+<<<<<<< HEAD
     client.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
       error: null,
@@ -26,6 +45,8 @@ describe("profile image validation", () => {
     bucket.upload.mockResolvedValue({ error: null });
     bucket.download.mockResolvedValue({ data: new Blob(["image"]), error: null });
     bucket.remove.mockResolvedValue({ error: null });
+=======
+>>>>>>> e37e27e (let's see)
   });
 
   it("accepts supported image types within the existing 8 MB limit", () => {
@@ -74,5 +95,46 @@ describe("profile image validation", () => {
     expect(bucket.remove).toHaveBeenCalledWith([
       "user-1/post-images/cover.webp",
     ]);
+  });
+});
+
+describe("remote image storage", () => {
+  it("requests an authorized upload and transfers the file directly to Storage", async () => {
+    requestMock.mockResolvedValueOnce({
+      key: "user-1/image-1.webp",
+      token: "signed-token",
+      path: "user-1/image-1.webp",
+    } as never);
+    uploadToSignedUrl.mockResolvedValueOnce({ data: {}, error: null });
+    const file = new File(["image"], "cover.webp", { type: "image/webp" });
+
+    await expect(saveImage(file)).resolves.toBe("user-1/image-1.webp");
+    expect(requestMock).toHaveBeenCalledWith("images/upload", {
+      method: "POST",
+      body: JSON.stringify({ contentType: "image/webp", size: file.size }),
+    });
+    expect(uploadToSignedUrl).toHaveBeenCalledWith(
+      "user-1/image-1.webp",
+      "signed-token",
+      file,
+      { contentType: "image/webp", upsert: false },
+    );
+  });
+
+  it("retrieves authorized signed URLs and deletes remote objects", async () => {
+    requestMock.mockResolvedValueOnce({ url: "https://storage.example/image" } as never);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("image")));
+    await expect(getImage("user-1/image.webp")).resolves.toBeInstanceOf(Blob);
+    expect(requestMock).toHaveBeenCalledWith(
+      "images/read?key=user-1%2Fimage.webp",
+    );
+
+    requestMock.mockResolvedValueOnce({ ok: true } as never);
+    await removeImages(["user-1/image.webp"]);
+    expect(requestMock).toHaveBeenLastCalledWith(
+      "images?key=user-1%2Fimage.webp",
+      { method: "DELETE" },
+    );
+    vi.unstubAllGlobals();
   });
 });

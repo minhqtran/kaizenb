@@ -16,7 +16,11 @@ export function AdminPostsPage() {
   }, [user])
 
   async function remove(post: BlogPost) {
+<<<<<<< HEAD
     if (!user || !window.confirm(`Permanently remove “${post.title || 'Untitled story'}” from shared storage?`)) return
+=======
+    if (!user || !window.confirm(`Permanently remove “${post.title || 'Untitled story'}”?`)) return
+>>>>>>> e37e27e (let's see)
     try {
       await deletePost(post.slug, user)
       setPosts((current) => current.filter((entry) => entry.id !== post.id))

@@ -14,4 +14,8 @@ export function effectiveDisplayName(
   user: Pick<AppUser, "displayName" | "nickname">,
 ): string {
   return user.nickname?.trim() || user.displayName;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> e37e27e (let's see)

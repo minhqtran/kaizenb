@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import { getSupabaseClient } from "./supabase";
 
 const bucketName = "media";
+=======
+import { apiRequest } from "./apiClient";
+import { getSupabaseClient } from "./supabaseClient";
+
+>>>>>>> e37e27e (let's see)
 const allowedImageTypes = [
   "image/jpeg",
   "image/png",
@@ -20,6 +26,7 @@ export function validateImageFile(file: File) {
     );
 }
 
+<<<<<<< HEAD
 export async function saveImage(
   file: File,
   purpose: "post-images" | "avatars",
@@ -56,3 +63,43 @@ export async function removeImages(keys: string[]) {
     .remove(keys);
   if (error) throw new Error(`Unable to remove images: ${error.message}`);
 }
+=======
+export async function saveImage(file: File): Promise<string> {
+  validateImageFile(file);
+  const signedUpload = await apiRequest<{
+    key: string;
+    token: string;
+    path: string;
+  }>("images/upload", {
+    method: "POST",
+    body: JSON.stringify({ contentType: file.type, size: file.size }),
+  });
+  const { error } = await getSupabaseClient()
+    .storage.from("blog-images")
+    .uploadToSignedUrl(signedUpload.path, signedUpload.token, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+  if (error) throw new Error(`Unable to store ${file.name}: ${error.message}`);
+  return signedUpload.key;
+}
+
+export async function getImage(key: string): Promise<Blob | null> {
+  const { url } = await apiRequest<{ url: string }>(
+    `images/read?key=${encodeURIComponent(key)}`,
+  );
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Unable to read this image from storage.");
+  return response.blob();
+}
+
+export async function removeImages(keys: string[]) {
+  await Promise.all(
+    keys.map((key) =>
+      apiRequest<{ ok: boolean }>(`images?key=${encodeURIComponent(key)}`, {
+        method: "DELETE",
+      }),
+    ),
+  );
+}
+>>>>>>> e37e27e (let's see)

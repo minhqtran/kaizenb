@@ -69,7 +69,12 @@ export function AccountPage() {
         nextImageKey = storedImageKey;
       }
       await updateProfile(nickname, nextImageKey);
+<<<<<<< HEAD
       profileUpdated = true;
+=======
+      if (previousImageKey && previousImageKey !== nextImageKey)
+        void removeImages([previousImageKey]).catch(() => undefined);
+>>>>>>> e37e27e (let's see)
       setSelectedImage(null);
       setImagePreview(null);
       setRemoveImage(false);
