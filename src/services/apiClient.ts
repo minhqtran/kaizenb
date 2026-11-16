@@ -19,16 +19,24 @@ export async function apiRequest<T>(
     ...options,
     headers,
   });
-  const result = (await response.json().catch(() => null)) as
-    | { error?: string }
-    | T
-    | null;
+  const responseText = await response.text();
+  let result: unknown;
+  try {
+    result = responseText ? JSON.parse(responseText) : null;
+  } catch {
+    throw new Error(
+      `API route /api/${path} returned a non-JSON response (HTTP ${response.status}). Check Vercel function routing.`,
+    );
+  }
   if (!response.ok) {
     const message =
-      result && typeof result === "object" && "error" in result
+      result && typeof result === "object" && "error" in result &&
+      typeof result.error === "string"
         ? result.error
         : undefined;
     throw new Error(message || `Request failed (${response.status}).`);
   }
+  if (result === null)
+    throw new Error(`API route /api/${path} returned an empty response.`);
   return result as T;
 }

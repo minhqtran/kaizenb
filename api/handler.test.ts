@@ -10,10 +10,11 @@ const createClientMock = vi.mocked(createClient);
 function makeRequest(
   method: string,
   authorization?: string,
+  url = "/api/posts",
 ): IncomingMessage & { body?: unknown } {
   return {
     method,
-    url: "/api/posts",
+    url,
     headers: {
       host: "localhost",
       ...(authorization ? { authorization } : {}),
@@ -34,6 +35,7 @@ function makeResponse() {
   return {
     response: response as unknown as ServerResponse,
     getBody: () => JSON.parse(body) as { error?: string },
+    getParsedBody: () => JSON.parse(body) as unknown,
   };
 }
 
@@ -72,5 +74,27 @@ describe("Vercel API authentication", () => {
 
     expect(response.statusCode).toBe(401);
     expect(getBody().error).toContain("session is invalid");
+  });
+
+  it("routes rewritten /api?path=posts requests to the public post list", async () => {
+    const query = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    createClientMock.mockReturnValueOnce({
+      from: vi.fn().mockReturnValue(query),
+    } as never);
+    const { response, getParsedBody } = makeResponse();
+
+    await handler(
+      makeRequest("GET", undefined, "/api?path=posts") as never,
+      response,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(getParsedBody()).toEqual([]);
   });
 });

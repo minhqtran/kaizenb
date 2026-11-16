@@ -55,6 +55,13 @@ describe("remote post repository", () => {
     expect(requestMock).toHaveBeenCalledWith("posts");
   });
 
+  it("rejects an invalid post-list response instead of returning null", async () => {
+    requestMock.mockResolvedValueOnce(null as never);
+    await expect(getPosts()).rejects.toThrow(
+      "The posts API did not return a list of stories.",
+    );
+  });
+
   it("uses server-owned identity for post creation", async () => {
     requestMock.mockResolvedValueOnce(post as never);
     await createPost(input, writer);

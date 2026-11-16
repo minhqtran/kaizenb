@@ -5,7 +5,10 @@ import { removeImages } from "./imageStorage";
 import { validatePostInput } from "./postValidation";
 
 export async function getPosts(): Promise<BlogPost[]> {
-  return apiRequest<BlogPost[]>("posts");
+  const posts = await apiRequest<unknown>("posts");
+  if (!Array.isArray(posts))
+    throw new Error("The posts API did not return a list of stories.");
+  return posts as BlogPost[];
 }
 
 export async function getAllPosts(actor: AppUser): Promise<BlogPost[]> {

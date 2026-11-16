@@ -216,7 +216,10 @@ function imageExtension(contentType: string) {
 
 async function handleRequest(request: ApiRequest, response: ServerResponse) {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
-  const path = requestUrl.pathname.replace(/^\/api\/?/, "").split("/").filter(Boolean);
+  const routedPath =
+    requestUrl.searchParams.get("path") ??
+    requestUrl.pathname.replace(/^\/api\/?/, "");
+  const path = routedPath.split("/").filter(Boolean);
   const method = request.method ?? "GET";
 
   if (path[0] === "posts" && path.length === 1 && method === "GET") {
