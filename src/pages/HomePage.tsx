@@ -36,7 +36,9 @@ export function HomePage() {
     <div className="page-container">
       <section className="home-intro">
         <div>
-          <div className="eyebrow">A journal for many-thoughts people</div>
+          <div className="eyebrow">
+            Nhật ký, hoặc là dấu chân của bạn trong dòng chảy của nhân loại.
+          </div>
           <h1>
             You can write it here
             <br />
@@ -44,8 +46,8 @@ export function HomePage() {
           </h1>
         </div>
         <p className="intro-copy">
-          Every topics, ideas, and stories are welcome. Except for politics (Do
-          not make a free app banned).
+          Every topics, ideas, and stories are welcome. Except for politic
+          points (Do not make a free app banned (┬┬﹏┬┬)).
         </p>
       </section>
       {loading && (

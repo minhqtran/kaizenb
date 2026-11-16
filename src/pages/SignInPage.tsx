@@ -16,7 +16,7 @@ export function SignInPage() {
     <section className="signin-page">
       <Link className="back-link" to="/"><ArrowLeft size={14} /> Back to stories</Link>
       <div className="signin-panel">
-        <div className="eyebrow">Goodword account</div>
+        <div className="eyebrow">KaizenB account</div>
         <h1>Come on in.</h1>
         <p>Sign in with Google to save your place, write stories, and join the conversation.</p>
         <GoogleSignInButton />

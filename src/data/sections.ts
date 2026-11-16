@@ -29,11 +29,10 @@ export const categorySections: Record<string, StorySection> = {
 
 export const aboutSection: StorySection = {
   title: "About",
-  eyebrow: "A journal for curious people",
+  eyebrow: "Lan tỏa năng lượng trang nhã",
   description:
-    "Goodword is a home for small stories, thoughtful notes, and the details worth keeping.",
+    "Kaizen là ngôi nhà cho các câu chuyện về âm nhạc, phim ảnh, và những suy ngẫm về cuộc sống. Chúng tôi tin rằng sự chú ý là một thực hành sáng tạo. Tạp chí này tập hợp các bài viết về những nơi chúng ta đến, những điều chúng ta làm, và những chi tiết hàng ngày định hình cuộc sống.",
   paragraphs: [
-    "We believe attention is a creative practice. This journal gathers writing about the places we go, the things we make, and the everyday details that shape a life.",
-    "Goodword is made for curious readers and generous storytellers. Take your time, find a thread, and make yourself at home.",
+    "Với tôi, đây là một cách để thực hành sự sáng tạo.",
   ],
 };

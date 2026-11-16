@@ -1,6 +1,6 @@
 export function safeMarkdownUrl(value: string) {
   try {
-    const url = new URL(value.trim(), "https://goodword.invalid");
+    const url = new URL(value.trim(), "https://kaizenb.invalid");
     return ["https:", "http:", "mailto:"].includes(url.protocol)
       ? value
       : undefined;
@@ -12,7 +12,7 @@ export function safeMarkdownUrl(value: string) {
 export function safeMarkdownImageUrl(value: string | undefined) {
   if (!value) return undefined;
   try {
-    const url = new URL(value.trim(), "https://goodword.invalid");
+    const url = new URL(value.trim(), "https://kaizenb.invalid");
     return ["https:", "http:"].includes(url.protocol) ? value : undefined;
   } catch {
     return undefined;
