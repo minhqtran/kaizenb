@@ -13,5 +13,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["./**/*.ts", "../src/types/**/*.ts", "../src/utils/**/*.ts"]
+  "include": [
+    "./**/*.ts",
+    "../server/**/*.ts",
+    "../src/types/**/*.ts",
+    "../src/utils/**/*.ts"
+  ]
 }

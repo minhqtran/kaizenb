@@ -1,1 +1,3 @@
-export { default } from "./[...path]";
+import handler from "../server/apiHandler";
+
+export default handler;

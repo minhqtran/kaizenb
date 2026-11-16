@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
-import handler from "./[...path]";
+import handler from "./index";
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: vi.fn() }));
 
