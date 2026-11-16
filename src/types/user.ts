@@ -2,6 +2,7 @@ export type UserRole = "viewer" | "writer" | "admin";
 
 export interface AppUser {
   id: string;
+  googleSubject: string;
   email: string;
   displayName: string;
   avatarUrl?: string;
@@ -14,8 +15,4 @@ export function effectiveDisplayName(
   user: Pick<AppUser, "displayName" | "nickname">,
 ): string {
   return user.nickname?.trim() || user.displayName;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> e37e27e (let's see)

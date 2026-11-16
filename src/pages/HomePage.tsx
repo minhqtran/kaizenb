@@ -54,11 +54,8 @@ export function HomePage() {
       {error && (
         <div className="error-state" role="alert">
           {error}
-<<<<<<< HEAD
           <br />
           Check the Supabase project configuration and try again.
-=======
->>>>>>> e37e27e (let's see)
         </div>
       )}
       {!loading && !error && featured && (

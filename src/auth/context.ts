@@ -5,10 +5,7 @@ export interface AuthContextValue {
   user: AppUser | null;
   users: AppUser[];
   loading: boolean;
-<<<<<<< HEAD
   error: string;
-=======
->>>>>>> e37e27e (let's see)
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   setUserRole: (targetId: string, role: UserRole) => Promise<void>;

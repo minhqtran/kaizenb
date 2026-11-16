@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-import { getSupabaseClient } from "./supabase";
-
-const bucketName = "media";
-=======
 import { apiRequest } from "./apiClient";
 import { getSupabaseClient } from "./supabaseClient";
 
->>>>>>> e37e27e (let's see)
 const allowedImageTypes = [
   "image/jpeg",
   "image/png",
@@ -14,6 +8,8 @@ const allowedImageTypes = [
   "image/gif",
 ];
 const maximumImageSize = 8 * 1024 * 1024;
+
+export type ImagePurpose = "post-images" | "avatars";
 
 export function validateImageFile(file: File) {
   if (!allowedImageTypes.includes(file.type))
@@ -26,45 +22,10 @@ export function validateImageFile(file: File) {
     );
 }
 
-<<<<<<< HEAD
 export async function saveImage(
   file: File,
-  purpose: "post-images" | "avatars",
+  purpose: ImagePurpose,
 ): Promise<string> {
-  validateImageFile(file);
-  const client = getSupabaseClient();
-  const { data: userData, error: userError } = await client.auth.getUser();
-  if (userError) throw new Error(userError.message);
-  if (!userData.user) throw new Error("Sign in before uploading images.");
-
-  const extension = file.name.split(".").pop()?.toLowerCase() || "img";
-  const key = `${userData.user.id}/${purpose}/${crypto.randomUUID()}.${extension}`;
-  const { error } = await client.storage.from(bucketName).upload(key, file, {
-    cacheControl: "3600",
-    contentType: file.type,
-    upsert: false,
-  });
-  if (error) throw new Error(`Unable to upload ${file.name}: ${error.message}`);
-  return key;
-}
-
-export async function getImage(key: string): Promise<Blob | null> {
-  const { data, error } = await getSupabaseClient()
-    .storage.from(bucketName)
-    .download(key);
-  if (error) throw new Error(`Unable to load image: ${error.message}`);
-  return data;
-}
-
-export async function removeImages(keys: string[]) {
-  if (!keys.length) return;
-  const { error } = await getSupabaseClient()
-    .storage.from(bucketName)
-    .remove(keys);
-  if (error) throw new Error(`Unable to remove images: ${error.message}`);
-}
-=======
-export async function saveImage(file: File): Promise<string> {
   validateImageFile(file);
   const signedUpload = await apiRequest<{
     key: string;
@@ -72,7 +33,11 @@ export async function saveImage(file: File): Promise<string> {
     path: string;
   }>("images/upload", {
     method: "POST",
-    body: JSON.stringify({ contentType: file.type, size: file.size }),
+    body: JSON.stringify({
+      contentType: file.type,
+      purpose,
+      size: file.size,
+    }),
   });
   const { error } = await getSupabaseClient()
     .storage.from("blog-images")
@@ -102,4 +67,3 @@ export async function removeImages(keys: string[]) {
     ),
   );
 }
->>>>>>> e37e27e (let's see)

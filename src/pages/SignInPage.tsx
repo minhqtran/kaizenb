@@ -4,11 +4,7 @@ import { GoogleSignInButton } from '../components/GoogleSignInButton'
 import { useAuth } from '../auth/useAuth'
 
 export function SignInPage() {
-<<<<<<< HEAD
-  const { user, error } = useAuth()
-=======
-  const { user, loading } = useAuth()
->>>>>>> e37e27e (let's see)
+  const { user, loading, error } = useAuth()
   const [searchParams] = useSearchParams()
   const next = searchParams.get('next')
   const destination = next?.startsWith('/') && !next.startsWith('//') ? next : '/'
@@ -24,12 +20,8 @@ export function SignInPage() {
         <h1>Come on in.</h1>
         <p>Sign in with Google to save your place, write stories, and join the conversation.</p>
         <GoogleSignInButton />
-<<<<<<< HEAD
         {error && <p className="form-error" role="alert">{error}</p>}
         <p className="signin-note">Google sign-in is verified by Supabase Auth. Access to drafts and writing tools is controlled by backend permissions.</p>
-=======
-        <p className="signin-note">Your Google sign-in is handled by Supabase Auth.</p>
->>>>>>> e37e27e (let's see)
       </div>
     </section>
   )

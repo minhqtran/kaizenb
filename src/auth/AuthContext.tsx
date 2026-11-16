@@ -1,135 +1,23 @@
-<<<<<<< HEAD
-import { useCallback, useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import type { Session } from "@supabase/supabase-js";
-import type { AppUser, UserRole } from "../types/user";
-import {
-  changeUserRole,
-  getProfile,
-  getUsers,
-  signOutUser,
-  startGoogleSignIn,
-  updateUserProfile,
-} from "../services/users";
-import { getSupabaseClient, isSupabaseConfigured } from "../services/supabase";
-=======
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { AppUser, UserRole } from "../types/user";
-import { changeUserRole, getSessionUser, getUsers, updateUserProfile } from "../services/users";
-import { getSupabaseClient, isSupabaseConfigured } from "../services/supabaseClient";
->>>>>>> e37e27e (let's see)
+import {
+  changeUserRole,
+  getSessionUser,
+  getUsers,
+  updateUserProfile,
+} from "../services/users";
+import {
+  getSupabaseClient,
+  isSupabaseConfigured,
+} from "../services/supabaseClient";
 import { AuthContext } from "./context";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [users, setUsers] = useState<AppUser[]>([]);
-<<<<<<< HEAD
-  const [loading, setLoading] = useState(isSupabaseConfigured);
-  const [error, setError] = useState("");
-
-  const applySession = useCallback(async (session: Session | null) => {
-    if (!session?.user) {
-      setUser(null);
-      setUsers([]);
-      setError("");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const profile = await getProfile(session.user);
-      setUser(profile);
-      setError("");
-      if (profile.role === "admin") {
-        try {
-          setUsers(await getUsers());
-        } catch (cause) {
-          setUsers([]);
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Unable to load people.",
-          );
-        }
-      } else {
-        setUsers([]);
-      }
-    } catch (cause) {
-      setUser(null);
-      setUsers([]);
-      setError(
-        cause instanceof Error ? cause.message : "Unable to load your account.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      return;
-    }
-
-    const client = getSupabaseClient();
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, session) => {
-      queueMicrotask(() => void applySession(session));
-    });
-    return () => subscription.unsubscribe();
-  }, [applySession]);
-
-  const signIn = useCallback(async () => {
-    setError("");
-    await startGoogleSignIn();
-  }, []);
-
-  const signOut = useCallback(async () => {
-    setError("");
-    try {
-      await signOutUser();
-    } catch (cause) {
-      const message =
-        cause instanceof Error ? cause.message : "Unable to sign out.";
-      setError(message);
-    }
-  }, []);
-
-  const setUserRole = useCallback(async (targetId: string, role: UserRole) => {
-    const updatedUsers = await changeUserRole(targetId, role);
-    setUsers(updatedUsers);
-  }, []);
-
-  const updateProfile = useCallback(
-    async (nickname: string, profileImageKey: string | null) => {
-      const updatedUser = await updateUserProfile(nickname, profileImageKey);
-      setUser(updatedUser);
-      setUsers((current) =>
-        current.map((entry) =>
-          entry.id === updatedUser.id ? updatedUser : entry,
-        ),
-      );
-      return updatedUser;
-    },
-    [],
-  );
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        users,
-        loading,
-        error,
-        signIn,
-        signOut,
-        setUserRole,
-        updateProfile,
-      }}
-=======
   const [loading, setLoading] = useState(() => isSupabaseConfigured());
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
@@ -143,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!hasSession) {
         setUser(null);
         setUsers([]);
+        setError("");
         setLoading(false);
         return;
       }
@@ -154,11 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (active && currentRequestId === requestId) {
           setUser(nextUser);
           setUsers(nextUsers);
+          setError("");
         }
-      } catch {
+      } catch (cause) {
         if (active && currentRequestId === requestId) {
           setUser(null);
           setUsers([]);
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "Unable to restore your Supabase session.",
+          );
         }
       } finally {
         if (active && currentRequestId === requestId) setLoading(false);
@@ -179,20 +74,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signIn() {
-    const redirectTo = new URL(window.location.href);
-    redirectTo.pathname = "/signin";
-    const { error } = await getSupabaseClient().auth.signInWithOAuth({
+    setError("");
+    const { error: signInError } = await getSupabaseClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: redirectTo.toString() },
+      options: { redirectTo: window.location.href },
     });
-    if (error) throw error;
+    if (signInError) {
+      setError(signInError.message);
+      throw signInError;
+    }
   }
 
   async function signOut() {
-    const { error } = await getSupabaseClient().auth.signOut();
-    if (error) throw error;
+    const { error: signOutError } = await getSupabaseClient().auth.signOut();
+    if (signOutError) {
+      setError(signOutError.message);
+      throw signOutError;
+    }
     setUser(null);
     setUsers([]);
+    setError("");
   }
 
   async function setUserRole(targetId: string, role: UserRole) {
@@ -210,8 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, users, loading, signIn, signOut, setUserRole, updateProfile }}
->>>>>>> e37e27e (let's see)
+      value={{ user, users, loading, error, signIn, signOut, setUserRole, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

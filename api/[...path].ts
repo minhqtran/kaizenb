@@ -76,7 +76,12 @@ function postFromRow(row: Record<string, unknown>): BlogPost {
       ? (row.content_blocks as StoryBlock[])
       : [],
     category: String(row.category ?? "Thoughts"),
-    images: Array.isArray(row.images) ? (row.images as BlogImage[]) : [],
+    images: Array.isArray(row.images)
+      ? (row.images as BlogImage[]).map((image) => ({
+          ...image,
+          size: image.size ?? "full",
+        }))
+      : [],
     authorId: String(row.author_id),
     authorName: String(row.author_name ?? ""),
     ...(typeof row.author_avatar_url === "string"
@@ -371,11 +376,15 @@ async function handleRequest(request: ApiRequest, response: ServerResponse) {
     const body = parseBody(request);
     const contentType = typeof body.contentType === "string" ? body.contentType : "";
     const size = typeof body.size === "number" ? body.size : 0;
+    const purpose = body.purpose;
+    if (purpose !== "post-images" && purpose !== "avatars")
+      throw new ApiError("Invalid image purpose.", 400);
+    if (purpose === "post-images") requireRole(actor!, "writer");
     const extension = imageExtension(contentType);
     if (!extension) throw new ApiError("Use JPEG, PNG, WebP, or GIF images.", 400);
     if (size <= 0 || size > 8 * 1024 * 1024)
       throw new ApiError("Images must be no larger than 8 MB.", 400);
-    const key = `${actor!.user.id}/${randomUUID()}.${extension}`;
+    const key = `${actor!.user.id}/${purpose}/${randomUUID()}.${extension}`;
     const { data, error } = await actor!.client.storage
       .from("blog-images")
       .createSignedUploadUrl(key);
